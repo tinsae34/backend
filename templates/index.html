@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tolo Delivery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f9f9f9;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        select {
+            padding: 5px;
+        }
+
+        .save-button {
+            padding: 5px 10px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Tolo Delivery Messages</h2>
+
+    {% if deliveries %}
+    <table>
+        <thead>
+            <tr>
+                <th>User Name</th>
+                <th>Pickup</th>
+                <th>Drop-off</th>
+                <th>Sender Phone</th>
+                <th>Receiver Phone</th>
+                <th>Location</th>
+                <th>Payment From</th>
+                <th>Item Description</th>
+                <th>Quantity</th>
+                <th>Timestamp</th>
+                <th>Assigned Driver</th> <!-- NEW -->
+                <th>Assign Driver</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in deliveries %}
+            <tr>
+                <td>{{ d.user_name }}</td>
+                <td>{{ d.pickup }}</td>
+                <td>{{ d.dropoff }}</td>
+                <td>{{ d.sender_phone}}</td>
+                <td>{{ d.receiver_phone }}</td>
+                <td>{{ d.full_address or 'N/A' }}</td>
+                <td>{{ d.payment_from_sender_or_receiver }}</td>
+                <td>{{ d.item_description }}</td>
+                <td>{{ d.Quantity }}</td>
+                <td>{{ d.timestamp }}</td>
+                <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
+                <td>
+                    <form action="{{ url_for('assign_driver') }}" method="post">
+                        <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
+                        <input type="text" name="driver_id" placeholder="Enter Driver ID">
+                        <button type="submit">Assign</button>
+                    </form>
+                      
+                </td>
+                
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+    <p>No delivery records found.</p>
+    {% endif %}
+</body>
+
+</html>
