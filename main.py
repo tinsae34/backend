@@ -9,7 +9,7 @@ MESSAGES_FILE = "messages.json"
 DRIVERS_FILE = "drivers.json"
 
 # MongoDB Setup (adjust as needed)
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGO_URI = "mongodb://mongo:VtkhumrJEVYtbCrhXJRHKslEZJhFEqcX@caboose.proxy.rlwy.net:53656"
 client = MongoClient(MONGO_URI)
 db = client["tolo_delivery"]
 deliveries_col = db["deliveries"]
