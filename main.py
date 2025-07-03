@@ -67,4 +67,6 @@ def assign_driver():
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    app.run(debug=True, port=3000)
+    port = int(os.environ.get("PORT", 3000))
+    app.run(debug=False, host="0.0.0.0", port=port)
+
