@@ -64,6 +64,7 @@
                 <th>Timestamp</th>
                 <th>Assigned Driver</th> <!-- NEW -->
                 <th>Assign Driver</th>
+                <th>Payment</th>
             </tr>
         </thead>
         <tbody>
@@ -79,6 +80,13 @@
                 <td>{{ d.item_description }}</td>
                 <td>{{ d.Quantity }}</td>
                 <td>{{ d.timestamp }}</td>
+                <td>
+                    <select name="payment_status" class="form-select" disabled>
+                        <option value="payable" {% if delivery.payment_status="payable" %}selected{% endif %}>Payable</option>
+                        <option value="free" {% if delivery.payment_status="free" %}selected{% endif %}>Free</option>
+                    </select>
+                </td>
+                  
                 <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
                 <td>
                     <form action="{{ url_for('assign_driver') }}" method="post">
