@@ -18,12 +18,17 @@ MESSAGES_FILE = "messages.json"
 DRIVERS_FILE = "drivers.json"
 
 # MongoDB
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(MONGO_URI)
 db = client["tolo_delivery"]
 deliveries_col = db["deliveries"]
 drivers_ = client["drivers"]
 drivers_col = drivers_["drivers"]
+
+deliveries_col.update_many(
+    {"payment_status": {"$exists": False}},
+    {"$set": {"payment_status": "payable"}}
+)
 
 def send_sms(phone_number, message):
     session = requests.Session()
@@ -56,6 +61,34 @@ def send_sms(phone_number, message):
             # anything other than 200 goes here.
         print ('http error ... code: %d , msg: %s ' % (result.status_code, result.content))
 
+from datetime import datetime
+
+@app.route("/add_delivery", methods=["POST"])
+def add_delivery():
+    try:
+        delivery = {
+            "user_name": request.form.get("user_name"),
+            "pickup": request.form.get("pickup"),
+            "dropoff": request.form.get("dropoff"),
+            "sender_phone": request.form.get("sender_phone"),
+            "receiver_phone": request.form.get("receiver_phone"),
+            "full_address": request.form.get("full_address"),
+            "payment_from_sender_or_receiver": request.form.get("payment_from_sender_or_receiver"),
+            "item_description": request.form.get("item_description"),
+            "Quantity": request.form.get("quantity"),
+            "price": request.form.get("price"),
+            "timestamp": datetime.utcnow(),
+            "payment_status": request.form.get("payment_status", "payable"),  # 👈 store Free/Payable here
+            "assigned_driver_id": None,
+        }
+
+        deliveries_col.insert_one(delivery)
+        flash("Delivery added successfully", "success")
+    except Exception as e:
+        print("❌ Error saving delivery:", e)
+        flash("Failed to add delivery", "error")
+
+    return redirect(url_for("index"))
 
 
 def load_deliveries():
@@ -133,7 +166,7 @@ def assign_driver():
             f"New Delivery Order\n "
             f"------------------\n"
             f"from / ከ:{senderphone}\n"
-            f"Location / ቦታ: {pickup_location}\n"
+            f"Location / ቦታ: {dropoff_location}\n"
             f"To / ለ: {reciverphone}\n"
             f"Location / ቦታ:{dropoff_location}\n"
             f"Item / ዕቃ: {item}\n"
@@ -152,8 +185,7 @@ def assign_driver():
             f"Thank you for choosing us. Tolo Delivery\n"
         )
         send_sms(phone_number=driver.get("phone", ""), message=message)
-        send_sms(phone_number=senderphone, message=message_2)
-        send_sms(phone_number=reciverphone, message=message_2)
+        send_sms(phone_number=driver.get("phone", ""), message=message_2)
         print(f"Driver {driver.get('name', 'Unknown')} assigned to delivery {delivery_id}.")
 
     except Exception as e:
