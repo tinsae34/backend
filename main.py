@@ -25,11 +25,6 @@ deliveries_col = db["deliveries"]
 drivers_ = client["drivers"]
 drivers_col = drivers_["drivers"]
 
-deliveries_col.update_many(
-    {"payment_status": {"$exists": False}},
-    {"$set": {"payment_status": "payable"}}
-)
-
 def send_sms(phone_number, message):
     session = requests.Session()
     # base url
@@ -61,34 +56,6 @@ def send_sms(phone_number, message):
             # anything other than 200 goes here.
         print ('http error ... code: %d , msg: %s ' % (result.status_code, result.content))
 
-from datetime import datetime
-
-@app.route("/add_delivery", methods=["POST"])
-def add_delivery():
-    try:
-        delivery = {
-            "user_name": request.form.get("user_name"),
-            "pickup": request.form.get("pickup"),
-            "dropoff": request.form.get("dropoff"),
-            "sender_phone": request.form.get("sender_phone"),
-            "receiver_phone": request.form.get("receiver_phone"),
-            "full_address": request.form.get("full_address"),
-            "payment_from_sender_or_receiver": request.form.get("payment_from_sender_or_receiver"),
-            "item_description": request.form.get("item_description"),
-            "Quantity": request.form.get("quantity"),
-            "price": request.form.get("price"),
-            "timestamp": datetime.utcnow(),
-            "payment_status": request.form.get("payment_status", "payable"),  # 👈 store Free/Payable here
-            "assigned_driver_id": None,
-        }
-
-        deliveries_col.insert_one(delivery)
-        flash("Delivery added successfully", "success")
-    except Exception as e:
-        print("❌ Error saving delivery:", e)
-        flash("Failed to add delivery", "error")
-
-    return redirect(url_for("index"))
 
 
 def load_deliveries():
@@ -125,10 +92,8 @@ def index():
         driver['id'] = str(driver['_id'])
         driver['name'] = driver.get('name', 'Unnamed')
 
-    
-    driver_map = {driver['id']: driver['name'] for driver in drivers}
+    return render_template("index.html", deliveries=deliveries, drivers=drivers)
 
-    return render_template("index.html", deliveries=deliveries, drivers=drivers, driver_map=driver_map)
 
 @app.route("/assign_driver", methods=["POST"])
 def assign_driver():
