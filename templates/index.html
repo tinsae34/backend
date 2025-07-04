@@ -73,42 +73,39 @@
                 <td>{{ d.user_name }}</td>
                 <td>{{ d.pickup }}</td>
                 <td>{{ d.dropoff }}</td>
-                <td>{{ d.sender_phone}}</td>
+                <td>{{ d.sender_phone }}</td>
                 <td>{{ d.receiver_phone }}</td>
                 <td>{{ d.full_address or 'N/A' }}</td>
                 <td>{{ d.payment_from_sender_or_receiver }}</td>
                 <td>{{ d.item_description }}</td>
                 <td>{{ d.Quantity }}</td>
                 <td>{{ d.timestamp }}</td>
-                <td>
-                    <select name="payment_status" class="form-select" disabled>
-                        <option value="payable" {% if delivery.payment_status="payable" %}selected{% endif %}>Payable</option>
-                        <option value="free" {% if delivery.payment_status="free" %}selected{% endif %}>Free</option>
-                    </select>
-                </td>
-                  
                 <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
+        
                 <td>
                     <form action="{{ url_for('assign_driver') }}" method="post">
                         <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
-
-
-
                         <select name="driver_id" required>
                             <option value="" disabled selected>Select Driver</option>
                             {% for driver in drivers %}
                             <option value="{{ driver.id }}">{{ driver.name }}</option>
                             {% endfor %}
                         </select>
-                        
                         <button type="submit">Assign</button>
                     </form>
-                      
                 </td>
-                
+        
+                <td>
+                    <select name="payment_status" required>
+                        <option value="payable">Payable</option>
+                        <option value="free">Free</option>
+                    </select>
+
+                </td>
             </tr>
             {% endfor %}
         </tbody>
+        
     </table>
 
     {% else %}
