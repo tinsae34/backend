@@ -152,7 +152,8 @@ def assign_driver():
             f"Thank you for choosing us. Tolo Delivery\n"
         )
         send_sms(phone_number=driver.get("phone", ""), message=message)
-        send_sms(phone_number=driver.get("phone", ""), message=message_2)
+        send_sms(phone_number=senderphone, message=message_2)
+        send_sms(phone_number=reciverphone, message=message_2)
         print(f"Driver {driver.get('name', 'Unknown')} assigned to delivery {delivery_id}.")
 
     except Exception as e:
