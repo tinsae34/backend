@@ -62,10 +62,9 @@
                 <th>Item Description</th>
                 <th>Quantity</th>
                 <th>Timestamp</th>
-                <th>Assigned Driver</th> 
-                <th>Payment</th>
+                <th>Assigned Driver</th> <!-- NEW -->
                 <th>Assign Driver</th>
-                
+                <th>Payment</th>
             </tr>
         </thead>
         <tbody>
@@ -82,27 +81,10 @@
                 <td>{{ d.Quantity }}</td>
                 <td>{{ d.timestamp }}</td>
                 <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
-
-                <td>
-                    <select name="payment_status" required>
-                        <option value="payable">Payable</option>
-                        <option value="free">Free</option>
-                    </select>
-
-                </td>
-                <td>
-                    <form action="{{ url_for('assign_driver') }}" method="post">
-                        <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
-                        <select name="driver_id" required>
-                            <option value="" disabled selected>Select Driver</option>
-                            {% for driver in drivers %}
-                            <option value="{{ driver.name }}">{{ driver.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit">Assign</button>
-                    </form>
-                </td>
         
+                <td>
+                    {{ driver_map[d.assigned_driver_id] if d.assigned_driver_id in driver_map else 'Not Assigned' }}
+                </td>
                 
             </tr>
             {% endfor %}
