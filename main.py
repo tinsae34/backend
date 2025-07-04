@@ -18,7 +18,7 @@ MESSAGES_FILE = "messages.json"
 DRIVERS_FILE = "drivers.json"
 
 # MongoDB
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client["tolo_delivery"]
 deliveries_col = db["deliveries"]
