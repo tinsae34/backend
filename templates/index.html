@@ -96,7 +96,7 @@
                         <select name="driver_id" required>
                             <option value="" disabled selected>Select Driver</option>
                             {% for driver in drivers %}
-                            <option value="{{ driver.id }}">{{ driver.name }}</option>
+                            <option value="{{ driver.name }}">{{ driver.name }}</option>
                             {% endfor %}
                         </select>
                         <button type="submit">Assign</button>
