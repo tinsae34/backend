@@ -125,7 +125,7 @@ def index():
         driver['id'] = str(driver['_id'])
         driver['name'] = driver.get('name', 'Unnamed')
 
-    # Create a map of driver ID to driver name
+    
     driver_map = {driver['id']: driver['name'] for driver in drivers}
 
     return render_template("index.html", deliveries=deliveries, drivers=drivers, driver_map=driver_map)
