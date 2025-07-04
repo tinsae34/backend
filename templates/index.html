@@ -62,9 +62,10 @@
                 <th>Item Description</th>
                 <th>Quantity</th>
                 <th>Timestamp</th>
+                <th>Payment</th>
                 <th>Assigned Driver</th> <!-- NEW -->
                 <th>Assign Driver</th>
-                <th>Payment</th>
+                
             </tr>
         </thead>
         <tbody>
@@ -81,7 +82,14 @@
                 <td>{{ d.Quantity }}</td>
                 <td>{{ d.timestamp }}</td>
                 <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
-        
+
+                <td>
+                    <select name="payment_status" required>
+                        <option value="payable">Payable</option>
+                        <option value="free">Free</option>
+                    </select>
+
+                </td>
                 <td>
                     <form action="{{ url_for('assign_driver') }}" method="post">
                         <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
@@ -95,13 +103,7 @@
                     </form>
                 </td>
         
-                <td>
-                    <select name="payment_status" required>
-                        <option value="payable">Payable</option>
-                        <option value="free">Free</option>
-                    </select>
-
-                </td>
+                
             </tr>
             {% endfor %}
         </tbody>
