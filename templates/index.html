@@ -62,7 +62,9 @@
                 <th>Item Description</th>
                 <th>Quantity</th>
                 <th>Timestamp</th>
-                <th>Assigned Driver</th> <!-- NEW -->
+                <th>Delivery Type</th>
+                <th>Assigned Driver</th>
+                <th>Set Delivery Type</th>
                 <th>Assign Driver</th>
             </tr>
         </thead>
@@ -79,13 +81,24 @@
                 <td>{{ d.item_description }}</td>
                 <td>{{ d.Quantity }}</td>
                 <td>{{ d.timestamp }}</td>
+                <td>{{ d.delivery_type if d.delivery_type else 'Not Set' }}</td>
                 <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
                 <td>
+                    <form action="{{ url_for('update_delivery_type') }}" method="POST">
+                        <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
+                        <select name="delivery_type" required>
+                            <option value="" disabled selected>Select Type</option>
+                            <option value="Free">Free</option>
+                            <option value="Payable">Payable</option>
+                        </select>
+                        <button type="submit" class="save-button">Save</button>
+                    </form>
+                </td>
+                <td>
+                    
+
                     <form action="{{ url_for('assign_driver') }}" method="post">
                         <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
-
-
-
                         <select name="driver_id" required>
                             <option value="" disabled selected>Select Driver</option>
                             {% for driver in drivers %}
