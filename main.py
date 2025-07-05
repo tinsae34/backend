@@ -84,9 +84,20 @@ def index():
     deliveries = list(deliveries_col.find().sort("timestamp", -1))
     drivers = list(drivers_col.find())
 
-    # Convert ObjectId to string for template rendering
+    # Convert ObjectId to string for rendering
     for delivery in deliveries:
         delivery['_id'] = str(delivery['_id'])
+
+        # Try to get driver name if assigned
+        assigned_driver_id = delivery.get("assigned_driver_id")
+        if assigned_driver_id:
+            try:
+                driver = drivers_col.find_one({"_id": ObjectId(assigned_driver_id)})
+                delivery["assigned_driver_name"] = driver.get("name", "Unknown") if driver else "Unknown"
+            except:
+                delivery["assigned_driver_name"] = "Unknown"
+        else:
+            delivery["assigned_driver_name"] = "Not Assigned"
 
     for driver in drivers:
         driver['id'] = str(driver['_id'])
