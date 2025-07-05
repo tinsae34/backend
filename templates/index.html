@@ -6,41 +6,99 @@
     <title>Tolo Delivery</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f9f9f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
         }
 
         table {
             border-collapse: collapse;
             width: 100%;
-            background: #fff;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            min-width: 1000px;
         }
 
         th,
         td {
-            padding: 12px;
-            border: 1px solid #ddd;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
             text-align: left;
+            font-size: 14px;
         }
 
         th {
-            background-color: #f0f0f0;
+            background-color: #f7f9fc;
+            color: #2c3e50;
+            font-weight: 600;
         }
 
         tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: #fafafa;
         }
 
-        select {
-            padding: 5px;
+        tr:hover {
+            background-color: #f1f5f9;
         }
 
-        .save-button {
-            padding: 5px 10px;
-            margin-left: 5px;
+        select,
+        .save-button,
+        button[type="submit"] {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 5px;
+            background-color: #ffffff;
+        }
+
+        .save-button,
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
             cursor: pointer;
+        }
+
+        .save-button:hover,
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-width: 768px) {
+
+            th,
+            td {
+                font-size: 12px;
+                padding: 10px;
+            }
+
+            .save-button,
+            button[type="submit"],
+            select {
+                font-size: 12px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
@@ -49,75 +107,72 @@
     <h2>Tolo Delivery Messages</h2>
 
     {% if deliveries %}
-    <table>
-        <thead>
-            <tr>
-                <th>User Name</th>
-                <th>Pickup</th>
-                <th>Drop-off</th>
-                <th>Sender Phone</th>
-                <th>Receiver Phone</th>
-                <th>Location</th>
-                <th>Payment From</th>
-                <th>Item Description</th>
-                <th>Quantity</th>
-                <th>Timestamp</th>
-                <th>Delivery Type</th>
-                <th>Assigned Driver</th>
-                <th>Set Delivery Type</th>
-                <th>Assign Driver</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in deliveries %}
-            <tr>
-                <td>{{ d.user_name }}</td>
-                <td>{{ d.pickup }}</td>
-                <td>{{ d.dropoff }}</td>
-                <td>{{ d.sender_phone}}</td>
-                <td>{{ d.receiver_phone }}</td>
-                <td>{{ d.full_address or 'N/A' }}</td>
-                <td>{{ d.payment_from_sender_or_receiver }}</td>
-                <td>{{ d.item_description }}</td>
-                <td>{{ d.Quantity }}</td>
-                <td>{{ d.timestamp }}</td>
-                <td>{{ d.delivery_type if d.delivery_type else 'Not Set' }}</td>
-                <td>{{ d.assigned_driver_id if d.assigned_driver_id else 'Not Assigned' }}</td>
-                <td>
-                    <form action="{{ url_for('update_delivery_type') }}" method="POST">
-                        <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
-                        <select name="delivery_type" required>
-                            <option value="" disabled selected>Select Type</option>
-                            <option value="Free">Free</option>
-                            <option value="Payable">Payable</option>
-                        </select>
-                        <button type="submit" class="save-button">Save</button>
-                    </form>
-                </td>
-                <td>
-                    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>User Name</th>
+                    <th>Pickup</th>
+                    <th>Drop-off</th>
+                    <th>Sender Phone</th>
+                    <th>Receiver Phone</th>
+                    <th>Location</th>
+                    <th>Payment From</th>
+                    <th>Item Description</th>
+                    <th>Quantity</th>
+                    <th>Timestamp</th>
+                    <th>Delivery Type</th>
+                    <th>Assigned Driver</th>
+                    <th>Set Delivery Type</th>
+                    <th>Assign Driver</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deliveries %}
+                <tr>
+                    <td>{{ d.user_name }}</td>
+                    <td>{{ d.pickup }}</td>
+                    <td>{{ d.dropoff }}</td>
+                    <td>{{ d.sender_phone }}</td>
+                    <td>{{ d.receiver_phone }}</td>
+                    <td>{{ d.full_address or 'N/A' }}</td>
+                    <td>{{ d.payment_from_sender_or_receiver }}</td>
+                    <td>{{ d.item_description }}</td>
+                    <td>{{ d.Quantity }}</td>
+                    <td>{{ d.timestamp }}</td>
+                    <td>{{ d.delivery_type if d.delivery_type else 'Not Set' }}</td>
+                    <td>{{ d.assigned_driver_name }}</td>
 
-                    <form action="{{ url_for('assign_driver') }}" method="post">
-                        <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
-                        <select name="driver_id" required>
-                            <option value="" disabled selected>Select Driver</option>
-                            {% for driver in drivers %}
-                            <option value="{{ driver.id }}">{{ driver.name }}</option>
-                            {% endfor %}
-                        </select>
-
-                        <button type="submit">Assign (send sms)</button>
-                    </form>
-
-                </td>
-
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
+                    <td>
+                        <form action="{{ url_for('update_delivery_type') }}" method="POST">
+                            <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
+                            <select name="delivery_type" required>
+                                <option value="" disabled selected>Select Type</option>
+                                <option value="Free">Free</option>
+                                <option value="Payable">Payable</option>
+                            </select>
+                            <button type="submit" class="save-button">Save</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('assign_driver') }}" method="post">
+                            <input type="hidden" name="delivery_id" value="{{ d['_id'] }}">
+                            <select name="driver_id" required>
+                                <option value="" disabled selected>Select Driver</option>
+                                {% for driver in drivers %}
+                                <option value="{{ driver.id }}">{{ driver.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit">Assign (Send SMS)</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
-    <p>No delivery records found.</p>
+    <p style="text-align: center; color: #777;">No delivery records found.</p>
     {% endif %}
 </body>
 
