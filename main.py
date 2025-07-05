@@ -94,6 +94,26 @@ def index():
 
     return render_template("index.html", deliveries=deliveries, drivers=drivers)
 
+@app.route("/update_delivery_type", methods=["POST"])
+def update_delivery_type():
+    try:
+        delivery_id = request.form.get("delivery_id")
+        delivery_type = request.form.get("delivery_type")
+
+        if delivery_id and delivery_type:
+            deliveries_col.update_one(
+                {"_id": ObjectId(delivery_id)},
+                {"$set": {"delivery_type": delivery_type}}
+            )
+            print(f"✅ Updated delivery type for {delivery_id} to {delivery_type}")
+        else:
+            print("⚠️ Missing delivery_id or delivery_type")
+
+    except Exception as e:
+        print("❌ Error updating delivery type:", e)
+
+    return redirect(url_for("index"))
+
 
 @app.route("/assign_driver", methods=["POST"])
 def assign_driver():
