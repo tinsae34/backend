@@ -15,7 +15,7 @@ AFRO_SENDER_ID = os.getenv("AFRO_SENDER_ID")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
-DRIVERS_FILE = "drivers.json"
+
 
 # MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
@@ -237,6 +237,59 @@ def notify_driver():
         flash("Failed to send SMS.", "danger")
 
     return redirect(url_for("index"))
+
+@app.route('/view_feedback')
+def view_feedback():
+    feedbacks = list(feedback_col.find().sort("timestamp", -1))  # newest first
+    return render_template("view_feedback.html", feedbacks=feedbacks)
+
+
+
+@app.route('/place_order', methods=['GET', 'POST'])
+def place_order():
+    if request.method == 'POST':
+        # Collect form data
+        user_name = request.form.get('user_name')
+        sender_phone = request.form.get('sender_phone')
+        receiver_phone = request.form.get('receiver_phone')
+        pickup = request.form.get('pickup')
+        dropoff = request.form.get('dropoff')
+        item_description = request.form.get('item_description')
+        quantity = request.form.get('quantity')
+        payment_from_sender_or_receiver = request.form.get('payment_from_sender_or_receiver')
+
+        # Basic validation (you can expand this)
+        if not all([user_name, sender_phone, receiver_phone, pickup, dropoff, item_description, quantity, payment_from_sender_or_receiver]):
+            flash("Please fill all fields", "danger")
+            return redirect(url_for('place_order'))
+
+        # Prepare document
+        delivery_doc = {
+            "user_name": user_name,
+            "sender_phone": sender_phone,
+            "receiver_phone": receiver_phone,
+            "pickup": pickup,
+            "dropoff": dropoff,
+            "item_description": item_description,
+            "Quantity": int(quantity),
+            "payment_from_sender_or_receiver": payment_from_sender_or_receiver,
+            "status": "pending",
+            "timestamp": datetime.datetime.utcnow()
+        }
+
+        # Insert into MongoDB
+        try:
+            deliveries_col.insert_one(delivery_doc)
+            flash("Delivery order placed successfully!", "success")
+        except Exception as e:
+            flash(f"Error saving delivery: {e}", "danger")
+
+        return redirect(url_for('place_order'))
+
+    # On GET, fetch all deliveries to display
+    deliveries = list(deliveries_col.find().sort("timestamp", -1))
+    return render_template('placeorder.html', deliveries=deliveries)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
