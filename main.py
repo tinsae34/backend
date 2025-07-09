@@ -14,8 +14,8 @@ AFRO_SENDER_ID = os.getenv("AFRO_SENDER_ID")
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY')
-
+MESSAGES_FILE = "messages.json"
+DRIVERS_FILE = "drivers.json"
 
 # MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
@@ -24,7 +24,6 @@ db = client["tolo_delivery"]
 deliveries_col = db["deliveries"]
 drivers_ = client["drivers"]
 drivers_col = drivers_["drivers"]
-feedback_col = db["feedback"]
 
 def send_sms(phone_number, message):
     session = requests.Session()
@@ -38,7 +37,7 @@ def send_sms(phone_number, message):
         # request body
     body = {'callback': 'YOUR_CALLBACK',
                 'from': AFRO_SENDER_ID,
-                'sender':'Tolo ET',
+                'sender':'AfroMessage',
                 'to': phone_number,
                 'message': message}
         # make request
@@ -72,7 +71,6 @@ def save_delivery(delivery):
     except Exception as e:
         print("Error saving delivery to MongoDB:", e)
 
-
 def load_drivers():
     try:
         with open(DRIVERS_FILE, "r") as f:
@@ -80,6 +78,32 @@ def load_drivers():
     except Exception as e:
         print("Error reading drivers.json:", e)
         return []
+
+@app.route("/")
+def index():
+    deliveries = list(deliveries_col.find().sort("timestamp", -1))
+    drivers = list(drivers_col.find())
+
+    # Convert ObjectId to string for rendering
+    for delivery in deliveries:
+        delivery['_id'] = str(delivery['_id'])
+
+        # Try to get driver name if assigned
+        assigned_driver_id = delivery.get("assigned_driver_id")
+        if assigned_driver_id:
+            try:
+                driver = drivers_col.find_one({"_id": ObjectId(assigned_driver_id)})
+                delivery["assigned_driver_name"] = driver.get("name", "Unknown") if driver else "Unknown"
+            except:
+                delivery["assigned_driver_name"] = "Unknown"
+        else:
+            delivery["assigned_driver_name"] = "Not Assigned"
+
+    for driver in drivers:
+        driver['id'] = str(driver['_id'])
+        driver['name'] = driver.get('name', 'Unnamed')
+
+    return render_template("index.html", deliveries=deliveries, drivers=drivers)
 
 @app.route("/update_delivery_type", methods=["POST"])
 def update_delivery_type():
@@ -100,55 +124,6 @@ def update_delivery_type():
         print("❌ Error updating delivery type:", e)
 
     return redirect(url_for("index"))
-
-
-@app.route('/update_status/<delivery_id>/<new_status>', methods=['POST'])
-def update_status(delivery_id, new_status):
-    if new_status not in ['successful', 'unsuccessful']:
-        flash('Invalid status value', 'danger')
-        return redirect(url_for('index'))
-
-    deliveries_col.update_one(
-        {'_id': ObjectId(delivery_id)},
-        {'$set': {'status': new_status}}
-    )
-    flash(f'Delivery status updated to {new_status}.', 'success')
-    return redirect(url_for('index', filter_status='pending'))  # adjust as needed
-
-
-@app.route("/")
-@app.route("/status/<filter_status>")
-def index(filter_status=None):
-    try:
-        query = {}
-        if filter_status in ["successful", "unsuccessful", "pending"]:
-            if filter_status == "pending":
-                query["status"] = {"$in": [None, "", "pending"]}
-            else:
-                query["status"] = filter_status
-
-        deliveries = list(deliveries_col.find(query).sort("timestamp", -1))
-        drivers = list(drivers_col.find())
-
-        # Convert ObjectId to string and assign driver name
-        for delivery in deliveries:
-            delivery["_id"] = str(delivery["_id"])
-            assigned_driver_id = delivery.get("assigned_driver_id")
-            if assigned_driver_id:
-                driver = drivers_col.find_one({"_id": ObjectId(assigned_driver_id)})
-                delivery["assigned_driver_name"] = driver.get("name", "Unknown") if driver else "Unknown"
-            else:
-                delivery["assigned_driver_name"] = "Not Assigned"
-
-        for driver in drivers:
-            driver["id"] = str(driver["_id"])
-            driver["name"] = driver.get("name", "Unnamed")
-
-        return render_template("index.html", deliveries=deliveries, drivers=drivers, current_tab=filter_status or "pending")
-
-    except Exception as e:
-        print("❌ Error fetching data:", e)
-        return render_template("index.html", deliveries=[], drivers=[], current_tab="pending")
 
 
 @app.route("/assign_driver", methods=["POST"])
@@ -174,30 +149,7 @@ def assign_driver():
             {"$set": {"assigned_driver_id": driver_id}}
         )
 
-       
-        print(f"Driver {driver.get('name', 'Unknown')} assigned to delivery {delivery_id}.")
-
-    except Exception as e:
-        print("❌ Error in assigning driver:", e)
-   
-
-    return redirect(url_for("index"))
-
-@app.route("/notify_driver", methods=["POST"])
-def notify_driver():
-    try:
-        delivery_id = request.form.get("delivery_id")
-        delivery = deliveries_col.find_one({"_id": ObjectId(delivery_id)})
-
-        if not delivery or not delivery.get("assigned_driver_id"):
-            flash("No driver assigned to this delivery.", "warning")
-            return redirect(url_for("index"))
-
-        driver = drivers_col.find_one({"_id": ObjectId(delivery["assigned_driver_id"])})
-
-        if not driver or not driver.get("phone"):
-            flash("Driver phone number not found.", "danger")
-            return redirect(url_for("index"))
+        # Compose SMS
        
 
         pickup_location = delivery.get("pickup", "N/A")
@@ -233,64 +185,13 @@ def notify_driver():
         send_sms(phone_number=driver.get("phone", ""), message=message)
         send_sms(phone_number=senderphone, message=message_2)
         send_sms(phone_number=reciverphone, message=message_2)
+        print(f"Driver {driver.get('name', 'Unknown')} assigned to delivery {delivery_id}.")
+
     except Exception as e:
-        print("❌ Error sending SMS to driver:", e)
-        flash("Failed to send SMS.", "danger")
+        print("❌ Error in assigning driver:", e)
+   
 
     return redirect(url_for("index"))
-
-@app.route('/view_feedback')
-def view_feedback():
-    feedbacks = list(feedback_col.find().sort("timestamp", -1))  # newest first
-    return render_template("view_feedback.html", feedbacks=feedbacks)
-
-
-
-@app.route('/place_order', methods=['GET', 'POST'])
-def place_order():
-    if request.method == 'POST':
-        # Collect form data
-        user_name = request.form.get('user_name')
-        sender_phone = request.form.get('sender_phone')
-        receiver_phone = request.form.get('receiver_phone')
-        pickup = request.form.get('pickup')
-        dropoff = request.form.get('dropoff')
-        item_description = request.form.get('item_description')
-        quantity = request.form.get('quantity')
-        payment_from_sender_or_receiver = request.form.get('payment_from_sender_or_receiver')
-
-        # Basic validation (you can expand this)
-        if not all([user_name, sender_phone, receiver_phone, pickup, dropoff, item_description, quantity, payment_from_sender_or_receiver]):
-            flash("Please fill all fields", "danger")
-            return redirect(url_for('place_order'))
-
-        # Prepare document
-        delivery_doc = {
-            "user_name": user_name,
-            "sender_phone": sender_phone,
-            "receiver_phone": receiver_phone,
-            "pickup": pickup,
-            "dropoff": dropoff,
-            "item_description": item_description,
-            "Quantity": int(quantity),
-            "payment_from_sender_or_receiver": payment_from_sender_or_receiver,
-            "status": "pending",
-            "timestamp": datetime.datetime.utcnow()
-        }
-
-        # Insert into MongoDB
-        try:
-            deliveries_col.insert_one(delivery_doc)
-            flash("Delivery order placed successfully!", "success")
-        except Exception as e:
-            flash(f"Error saving delivery: {e}", "danger")
-
-        return redirect(url_for('place_order'))
-
-    # On GET, fetch all deliveries to display
-    deliveries = list(deliveries_col.find().sort("timestamp", -1))
-    return render_template('placeorder.html', deliveries=deliveries)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
