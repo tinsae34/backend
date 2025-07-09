@@ -24,6 +24,7 @@ db = client["tolo_delivery"]
 deliveries_col = db["deliveries"]
 drivers_ = client["drivers"]
 drivers_col = drivers_["drivers"]
+feedback_col = db["feedback"]
 
 def send_sms(phone_number, message):
     session = requests.Session()
