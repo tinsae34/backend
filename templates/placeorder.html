@@ -133,42 +133,6 @@
 
         <button type="submit">Place Order</button>
     </form>
-
-    <h2>Existing Delivery Orders</h2>
-
-    {% if deliveries %}
-    <table>
-        <thead>
-            <tr>
-                <th>User Name</th>
-                <th>Pickup</th>
-                <th>Drop-off</th>
-                <th>Sender Phone</th>
-                <th>Receiver Phone</th>
-                <th>Item Description</th>
-                <th>Quantity</th>
-                <th>Payment From</th>
-                <th>Status</th>
-                <th>Timestamp (UTC)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in deliveries %}
-            <tr>
-                <td>{{ d.user_name }}</td>
-                <td>{{ d.pickup }}</td>
-                <td>{{ d.dropoff }}</td>
-                <td>{{ d.sender_phone }}</td>
-                <td>{{ d.receiver_phone }}</td>
-                <td>{{ d.item_description }}</td>
-                <td>{{ d.Quantity }}</td>
-                <td>{{ d.payment_from_sender_or_receiver }}</td>
-                <td>{{ d.status }}</td>
-                <td>{{ d.timestamp_str }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
     {% else %}
     <p>No delivery orders yet.</p>
     {% endif %}
