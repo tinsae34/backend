@@ -36,7 +36,7 @@ def send_sms(phone_number, message):
         # request body
     body = {'callback': 'YOUR_CALLBACK',
                 'from': AFRO_SENDER_ID,
-                'sender':'AfroMessage',
+                'sender':'Tolo ET',
                 'to': phone_number,
                 'message': message}
         # make request
