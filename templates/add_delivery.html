@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Add Delivery - Tolo Delivery</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #121212;
+            padding: 20px;
+            color: #f5f5f5;
+        }
+    
+        h2 {
+            text-align: center;
+            color: #1e90ff;
+        }
+    
+        form {
+            max-width: 600px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(30, 144, 255, 0.2);
+        }
+    
+        label {
+            display: block;
+            margin-top: 15px;
+            color: #f5f5f5;
+        }
+    
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background-color: #2a2a2a;
+            color: #f5f5f5;
+        }
+    
+        input::placeholder {
+            color: #bbb;
+        }
+    
+        button {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            width: 100%;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    
+        button:hover {
+            background-color: #0d6efd;
+        }
+    
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #1e90ff;
+            text-decoration: none;
+        }
+    
+        a:hover {
+            text-decoration: underline;
+            color: #63b3ed;
+        }
+    </style>
+    
+</head>
+
+<body>
+    <h2>Add New Delivery</h2>
+    <form action="{{ url_for('add_delivery_page') }}" method="POST">
+        <label>User Name:</label>
+        <input type="text" name="user_name" required>
+
+        <label>Pickup:</label>
+        <input type="text" name="pickup" required>
+
+        <label>Drop-off:</label>
+        <input type="text" name="dropoff" required>
+
+        <label>Sender Phone:</label>
+        <input type="text" name="sender_phone" required>
+
+        <label>Receiver Phone:</label>
+        <input type="text" name="receiver_phone" required>
+
+        <label>Location:</label>
+        <input type="text" name="full_address">
+
+        <label>Payment From (Sender/Receiver):</label>
+        <select name="payment_from_sender_or_receiver" required>
+            <option value="Sender">Sender</option>
+            <option value="Receiver">Receiver</option>
+        </select>
+
+        <label>Item Description:</label>
+        <input type="text" name="item_description" required>
+
+        <label>Quantity:</label>
+        <input type="number" name="quantity" required>
+
+        <button type="submit">Add Delivery</button>
+    </form>
+
+    <a href="{{ url_for('index') }}">← Back to Dashboard</a>
+</body>
+
+</html>
