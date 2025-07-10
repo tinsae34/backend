@@ -9,21 +9,21 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
-            background-color: #f0f2f5;
-            color: #333;
+            background-color: #121212;
+            color: #f5f5f5;
         }
-
+    
         h2 {
             text-align: center;
             margin-bottom: 20px;
-            color: #2c3e50;
+            color: #1e90ff;
         }
-
+    
         .tabs {
             text-align: center;
             margin-bottom: 20px;
         }
-
+    
         .tab {
             padding: 10px 20px;
             border-radius: 5px;
@@ -31,106 +31,110 @@
             text-decoration: none;
             font-weight: bold;
             display: inline-block;
+            background-color: #1f1f1f;
+            color: white;
         }
-
+    
         .tab.pending {
-            background-color: #e0e0e0;
-            color: black;
+            background-color: #2d2d2d;
+            color: white;
         }
-
+    
         .tab.successful {
-            background-color: green;
+            background-color: #1e90ff;
             color: white;
         }
-
+    
         .tab.unsuccessful {
-            background-color: red;
+            background-color: #e74c3c;
             color: white;
         }
-
+    
         .active {
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 5px #1e90ff;
             transform: scale(1.03);
         }
-
+    
         .table-container {
             overflow-x: auto;
-            background: #fff;
+            background: #1e1e1e;
             border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 0 12px rgba(30, 144, 255, 0.2);
         }
-
+    
         table {
             border-collapse: collapse;
             width: 100%;
             min-width: 1000px;
         }
-
+    
         th,
         td {
             padding: 12px 16px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #2e2e2e;
             text-align: left;
             font-size: 14px;
         }
-
+    
         th {
-            background-color: #f7f9fc;
-            color: #2c3e50;
+            background-color: #2b2b2b;
+            color: #1e90ff;
             font-weight: 600;
         }
-
+    
         tr:nth-child(even) {
-            background-color: #fafafa;
+            background-color: #1a1a1a;
         }
-
+    
         tr:hover {
-            background-color: #f1f5f9;
+            background-color: #2a2a2a;
         }
-
+    
         select,
         .save-button,
         button[type="submit"] {
             padding: 8px 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #444;
             border-radius: 6px;
             font-size: 14px;
             margin-top: 5px;
-            background-color: #ffffff;
+            background-color: #2c2c2c;
+            color: white;
         }
-
+    
         .save-button,
         button[type="submit"] {
-            background-color: #007bff;
+            background-color: #1e90ff;
             color: white;
             border: none;
             cursor: pointer;
         }
-
+    
         .save-button:hover,
         button[type="submit"]:hover {
-            background-color: #0056b3;
+            background-color: #0077cc;
         }
-
+    
         @media (max-width: 768px) {
-
+    
             th,
             td {
                 font-size: 12px;
                 padding: 10px;
             }
-
+    
             .save-button,
             button[type="submit"],
             select {
                 font-size: 12px;
             }
-
+    
             h2 {
                 font-size: 20px;
             }
         }
     </style>
+    
 </head>
 
 <body>
@@ -138,6 +142,8 @@
 
     <!-- Tabs for filtering status -->
     <div class="tabs">
+        <a href="{{ url_for('add_delivery_page') }}" class="tab" style="background-color:#007bff; color:white;">➕ Add
+            Delivery</a>
         <a href="{{ url_for('index', filter_status='pending') }}"
             class="tab pending {% if current_tab == 'pending' %}active{% endif %}">⏳ Pending</a>
         <a href="{{ url_for('index', filter_status='successful') }}"
