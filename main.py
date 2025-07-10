@@ -5,8 +5,8 @@ import os
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 import requests
-from flask import flash, redirect, url_for
-
+from datetime import datetime
+import re
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -14,6 +14,7 @@ AFRO_SENDER_ID = os.getenv("AFRO_SENDER_ID")
 
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY")
 DRIVERS_FILE = "drivers.json"
 
 # MongoDB
@@ -211,7 +212,7 @@ def notify_driver():
             f"New Delivery Order\n "
             f"------------------\n"
             f"from / ከ:{senderphone}\n"
-            f"Location / ቦታ: {pickup_location}\n"
+            f"Location / ቦታ: {dropoff_location}\n"
             f"To / ለ: {reciverphone}\n"
             f"Location / ቦታ:{dropoff_location}\n"
             f"Item / ዕቃ: {item}\n"
@@ -254,6 +255,39 @@ def view_feedback():
         print("❌ Error fetching feedback:", e)
         return render_template("view_feedback.html", feedbacks=[])
 
+
+
+def is_valid_ethiopian_number(phone):
+    return re.fullmatch(r'(\+251|0)9\d{8}', phone)
+
+@app.route('/add_delivery', methods=['GET', 'POST'])
+def add_delivery_page():
+    if request.method == 'POST':
+        data = {
+            "user_name": request.form.get("user_name"),
+            "pickup": request.form.get("pickup"),
+            "dropoff": request.form.get("dropoff"),
+            "sender_phone": request.form.get("sender_phone"),
+            "receiver_phone": request.form.get("receiver_phone"),
+            "full_address": request.form.get("full_address"),
+            "payment_from_sender_or_receiver": request.form.get("payment_from_sender_or_receiver"),
+            "item_description": request.form.get("item_description"),
+            "Quantity": int(request.form.get("quantity")),
+            "timestamp": datetime.utcnow(),
+            "delivery_type": None,
+            "assigned_driver_name": "Not Assigned",
+            "status": "pending"
+        }
+
+        if not is_valid_ethiopian_number(data["sender_phone"]) or not is_valid_ethiopian_number(data["receiver_phone"]):
+            flash("❌ Invalid phone number format", "danger")
+            return redirect(url_for('add_delivery_page'))
+
+        deliveries_col.insert_one(data)
+        flash("✅ Delivery added successfully!", "success")
+        return redirect(url_for('index'))
+
+    return render_template('add_delivery.html')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
