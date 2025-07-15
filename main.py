@@ -342,7 +342,7 @@ def add_delivery_page():
             "payment_from_sender_or_receiver": request.form.get("payment_from_sender_or_receiver"),
             "item_description": request.form.get("item_description"),
             "Quantity": int(request.form.get("quantity")),
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "delivery_type": None,
             "assigned_driver_name": "Not Assigned",
             "status": "pending"
