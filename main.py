@@ -143,7 +143,7 @@ def save_delivery(delivery):
 def delete_delivery(delivery_id):
     try:
         deliveries_col.delete_one({"_id": ObjectId(delivery_id)})
-        flash("✅ Delivery deleted successfully!", "success")
+        flash("✅ Delivery deleted successfully.", "success")
     except Exception as e:
         print("❌ Error deleting delivery:", e)
         flash("❌ Failed to delete delivery.", "danger")
