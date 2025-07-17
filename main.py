@@ -131,10 +131,17 @@ def index(filter_status=None):
             else:
                 query["status"] = filter_status
 
+        # Fetch deliveries matching filter
         deliveries = list(deliveries_col.find(query).sort("timestamp", -1))
         drivers = list(drivers_col.find())
 
-        # Convert ObjectId to string and assign driver name
+        # Count by status
+        pending_count = deliveries_col.count_documents({"status": {"$in": [None, "", "pending"]}})
+        successful_count = deliveries_col.count_documents({"status": "successful"})
+        unsuccessful_count = deliveries_col.count_documents({"status": "unsuccessful"})
+        feedback_count = feedback_col.count_documents({})
+
+        # Convert ObjectId to string and assign driver names
         for delivery in deliveries:
             delivery["_id"] = str(delivery["_id"])
             assigned_driver_id = delivery.get("assigned_driver_id")
@@ -148,12 +155,28 @@ def index(filter_status=None):
             driver["id"] = str(driver["_id"])
             driver["name"] = driver.get("name", "Unnamed")
 
-        return render_template("index.html", deliveries=deliveries, drivers=drivers, current_tab=filter_status or "pending")
+        return render_template(
+            "index.html",
+            deliveries=deliveries,
+            drivers=drivers,
+            current_tab=filter_status or "pending",
+            pending_count=pending_count,
+            successful_count=successful_count,
+            unsuccessful_count=unsuccessful_count,
+            feedback_count=feedback_count
+        )
 
     except Exception as e:
         print("❌ Error fetching data:", e)
-        return render_template("index.html", deliveries=[], drivers=[], current_tab="pending")
-
+        return render_template(
+            "index.html",
+            deliveries=[],
+            drivers=[],
+            current_tab="pending",
+            pending_count=0,
+            successful_count=0,
+            unsuccessful_count=0,
+        )
 
 @app.route("/assign_driver", methods=["POST"])
 def assign_driver():
@@ -216,7 +239,7 @@ def notify_driver():
             f"New Delivery Order\n "
             f"------------------\n"
             f"from / ከ:{senderphone}\n"
-            f"Location / ቦታ: {pickup_location}\n"
+            f"Location / ቦታ: {dropoff_location}\n"
             f"To / ለ: {reciverphone}\n"
             f"Location / ቦታ:{dropoff_location}\n"
             f"Item / ዕቃ: {item}\n"
