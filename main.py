@@ -143,6 +143,7 @@ def index(filter_status=None):
 
         # Convert ObjectId to string and assign driver names
         for delivery in deliveries:
+            delivery["price"] = delivery.get("price", None)
             delivery["_id"] = str(delivery["_id"])
             assigned_driver_id = delivery.get("assigned_driver_id")
             if assigned_driver_id:
@@ -255,6 +256,7 @@ def notify_driver():
             f"license Plate / የመንጃ ፈቃድ ሰሌዳ: {driver.get('vehicle_plate', 'N/A')}\n"
             f"item / ዕቃ: {item}\n"
             f"Quantity / ብዛት: {quantity}\n"
+            f"Price / ዋጋ: {price}\n"
             f"Thank you for choosing us. Tolo Delivery\n"
         )
         send_sms(phone_number=driver.get("phone", ""), message=message)
@@ -269,6 +271,23 @@ def notify_driver():
 @app.route("/feedback")
 def feedback_page():
     return render_template("feedback.html")
+
+@app.route("/update_price", methods=["POST"])
+def update_price():
+    try:
+        delivery_id = request.form.get("delivery_id")
+        price = int(request.form.get("price"))
+
+        deliveries_col.update_one(
+            {"_id": ObjectId(delivery_id)},
+            {"$set": {"price": price}}
+        )   
+        flash("✅ Price updated successfully.", "success")
+    except Exception as e:
+        print("❌ Error updating price:", e)
+        flash("❌ Failed to update price.", "danger")
+
+    return redirect(url_for("index"))
 
 
 @app.route("/view_feedback")
