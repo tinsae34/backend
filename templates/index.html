@@ -140,21 +140,33 @@
 <body>
     <h2>Tolo Delivery Messages</h2>
 
-    <!-- Tabs for filtering status -->
+    
     <div class="tabs">
-        <a href="{{ url_for('add_delivery_page') }}" class="tab" style="background-color:#007bff; color:white;">➕ Add
-            Delivery</a>
+        <a href="{{ url_for('add_delivery_page') }}" class="tab" style="background-color:#007bff; color:white;">
+            ➕ Add Delivery
+        </a>
+    
         <a href="{{ url_for('index', filter_status='pending') }}"
-            class="tab pending {% if current_tab == 'pending' %}active{% endif %}">⏳ Pending</a>
+            class="tab pending {% if current_tab == 'pending' %}active{% endif %}">
+            ⏳ Pending <span style="color:#ffc107;">({{ pending_count }})</span>
+        </a>
+    
         <a href="{{ url_for('index', filter_status='successful') }}"
-            class="tab successful {% if current_tab == 'successful' %}active{% endif %}">✅ Successful</a>
+            class="tab successful {% if current_tab == 'successful' %}active{% endif %}">
+            ✅ Successful <span style="color:#28a745;">({{ successful_count }})</span>
+        </a>
+    
         <a href="{{ url_for('index', filter_status='unsuccessful') }}"
-            class="tab unsuccessful {% if current_tab == 'unsuccessful' %}active{% endif %}">❌ Unsuccessful</a>
-        <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color:#28a745; color:white;">📋 View
-            Feedback</a>
-
-
+            class="tab unsuccessful {% if current_tab == 'unsuccessful' %}active{% endif %}">
+            ❌ Unsuccessful <span style="color:#1a1717;">({{ unsuccessful_count }})</span>
+        </a>
+    
+        <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color:#28a745; color:white;">
+            📋 View Feedback <span style="color: #fff;">({{ feedback_count }})</span>
+        </a>
     </div>
+
+
 
     {% if deliveries %}
     <div class="table-container">
@@ -259,7 +271,8 @@
                     </td>
 
                     <td>
-                        <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d['_id']) }}" style="display:inline;">
+                        <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d['_id']) }}"
+                            style="display:inline;">
                             <button type="submit" class="save-button" style="background-color:#dc3545;"
                                 onclick="return confirm('Are you sure you want to delete this delivery?')">
                                 🗑️ Delete
@@ -267,7 +280,7 @@
                         </form>
                     </td>
 
-                    
+
 
                 </tr>
                 {% endfor %}
