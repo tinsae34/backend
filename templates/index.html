@@ -132,6 +132,13 @@
             h2 {
                 font-size: 20px;
             }
+            td form {
+                margin-bottom: 8px;
+            }
+            td select {
+                width: 100%;
+            }
+
         }
     </style>
 
@@ -182,13 +189,11 @@
                     <th>Payment From</th>
                     <th>Item Description</th>
                     <th>Quantity</th>
-                    <th>Price</th>
                     <th>Timestamp</th>
                     <th>Delivery Type</th>
                     <th>Assigned Driver</th>
                     <th>Status</th>
-                    <th>Set Delivery Type</th>
-                    <th>Assign Driver</th>
+                    <th>Assign</th>
                     <th>Update Status</th>
                     <th>Notify Driver</th>
                     <th>Delete</th>
@@ -208,58 +213,53 @@
                     <td>{{ d.payment_from_sender_or_receiver }}</td>
                     <td>{{ d.item_description }}</td>
                     <td>{{ d.Quantity }}</td>
-            
-                    <!-- ✅ PRICE DROPDOWN -->
-                    <td>
-                        <form method="POST" action="{{ url_for('update_price') }}">
-                            <input type="hidden" name="delivery_id" value="{{ d._id }}">
-                            <select name="price" onchange="this.form.submit()">
-                                <option value="">--Select--</option>
-                                {% for p in [100, 200, 300] %}
-                                <option value="{{ p }}" {% if d.price==p %}selected{% endif %}>
-                                    {{ p }} birr
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    </td>
-            
                     <td>{{ d.timestamp }}</td>
                     <td>{{ d.delivery_type if d.delivery_type else 'Not Set' }}</td>
                     <td>{{ d.assigned_driver_name }}</td>
                     <td>{{ d.status or 'Pending' }}</td>
             
-                    <!-- Set Delivery Type -->
+        
                     <td>
-                        <form method="POST" action="{{ url_for('update_delivery_type') }}">
+                        
+                        <form method="POST" action="{{ url_for('update_price') }}" style="margin-bottom: 6px;">
                             <input type="hidden" name="delivery_id" value="{{ d._id }}">
-                            <select name="delivery_type" required onchange="this.form.submit()">
-                                <option value="" disabled {% if not d.delivery_type %}selected{% endif %}>Select Type</option>
+                            <select name="price" onchange="this.form.submit()" {% if current_tab in ['successful', 'unsuccessful' ]
+                                %}disabled{% endif %}>
+                                <option value="">Price</option>
+                                {% for p in [100, 200, 300] %}
+                                <option value="{{ p }}" {% if d.price==p %}selected{% endif %}>{{ p }} birr</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    
+                        <form method="POST" action="{{ url_for('update_delivery_type') }}" style="margin-bottom: 6px;">
+                            <input type="hidden" name="delivery_id" value="{{ d._id }}">
+                            <select name="delivery_type" onchange="this.form.submit()" {% if current_tab in ['successful', 'unsuccessful' ]
+                                %}disabled{% endif %}>
+                                <option value="" disabled {% if not d.delivery_type %}selected{% endif %}>Type</option>
                                 <option value="Free" {% if d.delivery_type=='Free' %}selected{% endif %}>Free</option>
                                 <option value="Payable" {% if d.delivery_type=='Payable' %}selected{% endif %}>Payable</option>
                             </select>
                         </form>
-                    </td>
-            
-                    <!-- Assign Driver -->
-                    <td>
-                        <form action="{{ url_for('assign_driver') }}" method="POST">
+                    
+                
+                        <form method="POST" action="{{ url_for('assign_driver') }}">
                             <input type="hidden" name="delivery_id" value="{{ d._id }}">
-                            <select name="driver_id" required onchange="this.form.submit()">
+                            <select name="driver_id" onchange="this.form.submit()" {% if current_tab in ['successful', 'unsuccessful' ]
+                                %}disabled{% endif %}>
                                 <option value="" disabled {% if not d.assigned_driver_name or d.assigned_driver_name=='Not Assigned'
-                                    %}selected{% endif %}>
-                                    Select Driver
-                                </option>
+                                    %}selected{% endif %}>Driver</option>
                                 {% for driver in drivers %}
-                                <option value="{{ driver.id }}" {% if d.assigned_driver_name==driver.name %}selected{% endif %}>
-                                    {{ driver.name }}
-                                </option>
+                                <option value="{{ driver.id }}" {% if d.assigned_driver_name==driver.name %}selected{% endif %}>{{
+                                    driver.name }}</option>
                                 {% endfor %}
                             </select>
                         </form>
                     </td>
+
+                    
             
-                    <!-- Notify Driver -->
+              
                     <td>
                         {% if d.assigned_driver_name != "Not Assigned" %}
                         <form action="{{ url_for('notify_driver') }}" method="POST">
@@ -271,7 +271,6 @@
                         {% endif %}
                     </td>
             
-                    <!-- Update Status -->
                     <td>
                         <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='successful') }}"
                             style="display:inline;">
@@ -283,7 +282,6 @@
                         </form>
                     </td>
             
-                    <!-- Delete -->
                     <td>
                         <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d._id) }}" style="display:inline;">
                             <button type="submit" class="save-button" style="background-color:#dc3545;"
