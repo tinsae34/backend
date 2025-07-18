@@ -83,27 +83,21 @@ def delete_delivery(delivery_id):
     return redirect(url_for("index"))
 
 
-
-
 @app.route("/update_delivery_type", methods=["POST"])
 def update_delivery_type():
     try:
-        delivery_id = request.form.get("delivery_id")
-        delivery_type = request.form.get("delivery_type")
+        data = request.get_json()
+        delivery_id = data.get("delivery_id")
+        delivery_type = data.get("delivery_type")
 
-        if delivery_id and delivery_type:
-            deliveries_col.update_one(
-                {"_id": ObjectId(delivery_id)},
-                {"$set": {"delivery_type": delivery_type}}
-            )
-            print(f"✅ Updated delivery type for {delivery_id} to {delivery_type}")
-        else:
-            print("⚠️ Missing delivery_id or delivery_type")
-
+        deliveries_col.update_one(
+            {"_id": ObjectId(delivery_id)},
+            {"$set": {"delivery_type": delivery_type}}
+        )
+        return {"success": True}, 200
     except Exception as e:
         print("❌ Error updating delivery type:", e)
-
-    return redirect(url_for("index"))
+        return {"success": False, "error": str(e)}, 500
 
 
 @app.route('/update_status/<delivery_id>/<new_status>', methods=['POST'])
@@ -182,34 +176,24 @@ def index(filter_status=None):
 @app.route("/assign_driver", methods=["POST"])
 def assign_driver():
     try:
-        delivery_id = request.form.get("delivery_id", "").strip()
-        driver_id = request.form.get("driver_id", "").strip()
-
-        if not delivery_id or not driver_id:
-            return redirect(url_for("index"))
+        data = request.get_json()
+        delivery_id = data.get("delivery_id")
+        driver_id = data.get("driver_id")
 
         delivery = deliveries_col.find_one({"_id": ObjectId(delivery_id)})
-        if not delivery:
-            return redirect(url_for("index"))
-
         driver = drivers_col.find_one({"_id": ObjectId(driver_id)})
-        if not driver:
-            return redirect(url_for("index"))
 
-        # Assign driver
+        if not delivery or not driver:
+            return {"success": False, "error": "Invalid delivery or driver"}, 400
+
         deliveries_col.update_one(
             {"_id": ObjectId(delivery_id)},
             {"$set": {"assigned_driver_id": driver_id}}
         )
-
-       
-        print(f"Driver {driver.get('name', 'Unknown')} assigned to delivery {delivery_id}.")
-
+        return {"success": True}, 200
     except Exception as e:
         print("❌ Error in assigning driver:", e)
-   
-
-    return redirect(url_for("index"))
+        return {"success": False, "error": str(e)}, 500
 
 @app.route("/notify_driver", methods=["POST"])
 def notify_driver():
@@ -275,19 +259,18 @@ def feedback_page():
 @app.route("/update_price", methods=["POST"])
 def update_price():
     try:
-        delivery_id = request.form.get("delivery_id")
-        price = int(request.form.get("price"))
+        data = request.get_json()
+        delivery_id = data.get("delivery_id")
+        price = int(data.get("price"))
 
         deliveries_col.update_one(
             {"_id": ObjectId(delivery_id)},
             {"$set": {"price": price}}
-        )   
-        flash("✅ Price updated successfully.", "success")
+        )
+        return {"success": True}, 200
     except Exception as e:
         print("❌ Error updating price:", e)
-        flash("❌ Failed to update price.", "danger")
-
-    return redirect(url_for("index"))
+        return {"success": False, "error": str(e)}, 500
 
 
 @app.route("/view_feedback")
