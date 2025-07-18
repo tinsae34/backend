@@ -11,12 +11,14 @@
             margin: 20px;
             background-color: #121212;
             color: #f5f5f5;
+            font-weight: bold;
         }
+
 
         h2 {
             text-align: center;
             margin-bottom: 20px;
-            color: #1e90ff;
+            color: #ffffff;
         }
 
         .tabs {
@@ -41,12 +43,12 @@
         }
 
         .tab.successful {
-            background-color: #1e90ff;
+            background-color: #2d2d2d;
             color: white;
         }
 
         .tab.unsuccessful {
-            background-color: #e74c3c;
+            background-color: #2d2d2d;
             color: white;
         }
 
@@ -149,7 +151,7 @@
 
 
     <div class="tabs">
-        <a href="{{ url_for('add_delivery_page') }}" class="tab" style="background-color:#007bff; color:white;">
+        <a href="{{ url_for('add_delivery_page') }}" class="tab" style="background-color: #2a2a2a; color:white;">
             ➕ Add Delivery
         </a>
 
@@ -168,7 +170,7 @@
             ❌ Unsuccessful <span style="color:#1a1717;">({{ unsuccessful_count }})</span>
         </a>
 
-        <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color:#28a745; color:white;">
+        <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color: #2a2a2a; color:white;">
             📋 View Feedback <span style="color: #fff;">({{ feedback_count }})</span>
         </a>
     </div>
@@ -293,30 +295,30 @@
     <p style="text-align: center; color: #777;">No delivery records found for this tab.</p>
     {% endif %}
     <script>
-        async function updatePrice(deliveryId, price) {
-            await fetch('{{ url_for("update_price") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ delivery_id: deliveryId, price: price })
-            });
-        }
+    async function updatePrice(deliveryId, price) {
+        await fetch('{{ url_for("update_price") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delivery_id: deliveryId, price: price })
+        });
+    }
 
-        async function updateDeliveryType(deliveryId, deliveryType) {
-            await fetch('{{ url_for("update_delivery_type") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ delivery_id: deliveryId, delivery_type: deliveryType })
-            });
-        }
+    async function updateDeliveryType(deliveryId, deliveryType) {
+        await fetch('{{ url_for("update_delivery_type") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delivery_id: deliveryId, delivery_type: deliveryType })
+        });
+    }
 
-        async function assignDriver(deliveryId, driverId) {
-            await fetch('{{ url_for("assign_driver") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ delivery_id: deliveryId, driver_id: driverId })
-            });
-        }
-    </script>
+    async function assignDriver(deliveryId, driverId) {
+        await fetch('{{ url_for("assign_driver") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delivery_id: deliveryId, driver_id: driverId })
+        });
+    }
+</script>
 
 </body>
 
