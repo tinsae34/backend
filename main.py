@@ -125,17 +125,17 @@ def index(filter_status=None):
             else:
                 query["status"] = filter_status
 
-        # Fetch deliveries matching filter
+       
         deliveries = list(deliveries_col.find(query).sort("timestamp", -1))
         drivers = list(drivers_col.find())
 
-        # Count by status
+      
         pending_count = deliveries_col.count_documents({"status": {"$in": [None, "", "pending"]}})
         successful_count = deliveries_col.count_documents({"status": "successful"})
         unsuccessful_count = deliveries_col.count_documents({"status": "unsuccessful"})
         feedback_count = feedback_col.count_documents({})
 
-        # Convert ObjectId to string and assign driver names
+   
         for delivery in deliveries:
             delivery["price"] = delivery.get("price", None)
             delivery["_id"] = str(delivery["_id"])
@@ -213,7 +213,7 @@ def notify_driver():
         if not driver or not driver.get("phone"):
             return {"success": False, "error": "Driver phone number not found."}, 400
 
-        # build and send SMS
+    
         pickup_location = delivery.get("pickup", "N/A")
         senderphone = delivery.get("sender_phone", "N/A")
         dropoff_location = delivery.get("dropoff", "N/A")
@@ -280,9 +280,9 @@ def update_price():
 @app.route("/view_feedback")
 def view_feedback():
     try:
-        feedbacks = list(feedback_col.find().sort("_id", -1))  # recent first
+        feedbacks = list(feedback_col.find().sort("_id", -1))  
         for fb in feedbacks:
-            fb["_id"] = str(fb["_id"])  # Convert ObjectId to string
+            fb["_id"] = str(fb["_id"])
         return render_template("view_feedback.html", feedbacks=feedbacks)
     except Exception as e:
         print("❌ Error fetching feedback:", e)
