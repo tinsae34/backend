@@ -229,7 +229,7 @@
                     <td>{{ d.status or 'Pending' }}</td>
 
 
-                    <!-- In Assign column -->
+                  
                     <td>
                         <select onchange="updatePrice('{{ d._id }}', this.value)" {% if current_tab in
                             ['successful', 'unsuccessful' ] %}disabled{% endif %}>
@@ -309,7 +309,7 @@
 
                     </td>
 
-                    <!-- Delete -->
+                  
                     <td>
                         <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d._id) }}"
                             style="display:inline;">
