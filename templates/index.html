@@ -75,7 +75,7 @@
             padding: 12px 16px;
             border: 1px solid #2e2e2e;
             text-align: left;
-            font-size: 14px;
+            font-size: 16px;
         }
 
         th {
@@ -165,17 +165,17 @@
 
         <a href="{{ url_for('index', filter_status='pending') }}"
             class="tab pending {% if current_tab == 'pending' %}active{% endif %}">
-            ⏳ Pending <span style="color:#ffc107;">({{ pending_count }})</span>
+            ⏳ Pending <span style="color:#ffffff;">({{ pending_count }})</span>
         </a>
 
         <a href="{{ url_for('index', filter_status='successful') }}"
             class="tab successful {% if current_tab == 'successful' %}active{% endif %}">
-            ✅ Successful <span style="color:#28a745;">({{ successful_count }})</span>
+            ✅ Successful <span style="color:#ffffff;">({{ successful_count }})</span>
         </a>
 
         <a href="{{ url_for('index', filter_status='unsuccessful') }}"
             class="tab unsuccessful {% if current_tab == 'unsuccessful' %}active{% endif %}">
-            ❌ Unsuccessful <span style="color:#1a1717;">({{ unsuccessful_count }})</span>
+            ❌ Unsuccessful <span style="color:#ffffff;">({{ unsuccessful_count }})</span>
         </a>
 
         <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color: #2a2a2a; color:white;">
