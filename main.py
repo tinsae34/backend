@@ -198,20 +198,22 @@ def assign_driver():
 @app.route("/notify_driver", methods=["POST"])
 def notify_driver():
     try:
-        delivery_id = request.form.get("delivery_id")
+        data = request.get_json()
+        delivery_id = data.get("delivery_id")
+        if not delivery_id:
+            return {"success": False, "error": "Missing delivery_id"}, 400
+
         delivery = deliveries_col.find_one({"_id": ObjectId(delivery_id)})
 
         if not delivery or not delivery.get("assigned_driver_id"):
-            flash("No driver assigned to this delivery.", "warning")
-            return redirect(url_for("index"))
+            return {"success": False, "error": "No driver assigned to this delivery."}, 400
 
         driver = drivers_col.find_one({"_id": ObjectId(delivery["assigned_driver_id"])})
 
         if not driver or not driver.get("phone"):
-            flash("Driver phone number not found.", "danger")
-            return redirect(url_for("index"))
-       
+            return {"success": False, "error": "Driver phone number not found."}, 400
 
+        # build and send SMS
         pickup_location = delivery.get("pickup", "N/A")
         senderphone = delivery.get("sender_phone", "N/A")
         dropoff_location = delivery.get("dropoff", "N/A")
@@ -220,6 +222,7 @@ def notify_driver():
         quantity = delivery.get("Quantity", "N/A")
         price = delivery.get("price", "N/A")
         collect_from = delivery.get("payment_from_sender_or_receiver", "N/A")
+
         message = (
             f"New Delivery Order\n "
             f"------------------\n"
@@ -231,8 +234,8 @@ def notify_driver():
             f"Qty / ብዛት:{quantity}\n"
             f"Price / ዋጋ: {price}\n"
             f"Collect from / ክፍያ ከ: {collect_from}\n"
-
         )
+
         message_2 = (
             f"Your Driver Has Been Assigned / ውድ ደንበኛ፣ ሹፌርህ ተመድቧል።\n"
             f"Driver Name / የሾፌር ስም: {driver.get('name', 'N/A')}\n"
@@ -243,14 +246,15 @@ def notify_driver():
             f"Price / ዋጋ: {price}\n"
             f"Thank you for choosing us. Tolo Delivery\n"
         )
-        send_sms(phone_number=driver.get("phone", ""), message=message)
-        send_sms(phone_number=senderphone, message=message_2)
-        send_sms(phone_number=reciverphone, message=message_2)
-    except Exception as e:
-        print("❌ Error sending SMS to driver:", e)
-        flash("Failed to send SMS.", "danger")
 
-    return redirect(url_for("index"))
+        send_sms(driver.get("phone", ""), message)
+        send_sms(senderphone, message_2)
+        send_sms(reciverphone, message_2)
+
+        return {"success": True}
+    except Exception as e:
+        print("❌ Error notifying driver:", e)
+        return {"success": False, "error": str(e)}, 500
 
 @app.route("/feedback")
 def feedback_page():
