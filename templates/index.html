@@ -116,6 +116,11 @@
         button[type="submit"]:hover {
             background-color: #0077cc;
         }
+        .disabled-button {
+            background-color: #555 !important;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
 
         @media (max-width: 768px) {
 
@@ -196,8 +201,8 @@
                     <th>Assigned Driver</th>
                     <th>Status</th>
                     <th>Assign</th>
-                    <th>Update Status</th>
                     <th>Notify Driver</th>
+                    <th>Update Status</th>
                     <th>Delete</th>
 
 
@@ -254,35 +259,56 @@
             
                     <!-- Notify Driver -->
                     <td>
-                        {% if d.assigned_driver_name != "Not Assigned" %}
                         <form action="{{ url_for('notify_driver') }}" method="POST">
                             <input type="hidden" name="delivery_id" value="{{ d._id }}">
-                            <button type="submit" class="save-button" style="background-color:#f39c12;">📩 Send SMS</button>
+                            <button type="submit"
+                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
+                                style="background-color: #f39c12;" {% if current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif %}>
+                                📩 Send SMS
+                            </button>
+
+
                         </form>
-                        {% else %}
-                        <span style="color:#999;">No Driver</span>
-                        {% endif %}
                     </td>
+                   
+
             
                     <!-- Update Status -->
                     <td>
                         <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='successful') }}"
                             style="display:inline;">
-                            <button type="submit" class="save-button" style="background-color:green;">✅</button>
+                            <button type="submit"
+                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}" {% if
+                                current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif %}>
+                                ✅
+                            </button>
+
+
                         </form>
+                        
                         <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='unsuccessful') }}"
                             style="display:inline;">
-                            <button type="submit" class="save-button" style="background-color:red;">❌</button>
+                            <button type="submit"
+                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
+                                style="background-color: red;" {% if current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif %}>
+                                ❌
+                            </button>
+
                         </form>
+
                     </td>
             
                     <!-- Delete -->
                     <td>
                         <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d._id) }}" style="display:inline;">
-                            <button type="submit" class="save-button" style="background-color:#dc3545;"
+                            <button type="submit"
+                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
+                                style="background-color: #dc3545;" {% if current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif %}
                                 onclick="return confirm('Are you sure you want to delete this delivery?')">
                                 🗑️ Delete
                             </button>
+
+
                         </form>
                     </td>
                 </tr>
@@ -318,6 +344,7 @@
             body: JSON.stringify({ delivery_id: deliveryId, driver_id: driverId })
         });
     }
+
 </script>
 
 </body>
