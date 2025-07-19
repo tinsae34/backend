@@ -125,17 +125,17 @@ def index(filter_status=None):
             else:
                 query["status"] = filter_status
 
-       
+        # Fetch deliveries matching filter
         deliveries = list(deliveries_col.find(query).sort("timestamp", -1))
         drivers = list(drivers_col.find())
 
-      
+        # Count by status
         pending_count = deliveries_col.count_documents({"status": {"$in": [None, "", "pending"]}})
         successful_count = deliveries_col.count_documents({"status": "successful"})
         unsuccessful_count = deliveries_col.count_documents({"status": "unsuccessful"})
         feedback_count = feedback_col.count_documents({})
 
-   
+        # Convert ObjectId to string and assign driver names
         for delivery in deliveries:
             delivery["price"] = delivery.get("price", None)
             delivery["_id"] = str(delivery["_id"])
@@ -198,22 +198,20 @@ def assign_driver():
 @app.route("/notify_driver", methods=["POST"])
 def notify_driver():
     try:
-        data = request.get_json()
-        delivery_id = data.get("delivery_id")
-        if not delivery_id:
-            return {"success": False, "error": "Missing delivery_id"}, 400
-
+        delivery_id = request.form.get("delivery_id")
         delivery = deliveries_col.find_one({"_id": ObjectId(delivery_id)})
 
         if not delivery or not delivery.get("assigned_driver_id"):
-            return {"success": False, "error": "No driver assigned to this delivery."}, 400
+            flash("No driver assigned to this delivery.", "warning")
+            return redirect(url_for("index"))
 
         driver = drivers_col.find_one({"_id": ObjectId(delivery["assigned_driver_id"])})
 
         if not driver or not driver.get("phone"):
-            return {"success": False, "error": "Driver phone number not found."}, 400
+            flash("Driver phone number not found.", "danger")
+            return redirect(url_for("index"))
+       
 
-    
         pickup_location = delivery.get("pickup", "N/A")
         senderphone = delivery.get("sender_phone", "N/A")
         dropoff_location = delivery.get("dropoff", "N/A")
@@ -222,7 +220,6 @@ def notify_driver():
         quantity = delivery.get("Quantity", "N/A")
         price = delivery.get("price", "N/A")
         collect_from = delivery.get("payment_from_sender_or_receiver", "N/A")
-
         message = (
             f"New Delivery Order\n "
             f"------------------\n"
@@ -234,8 +231,8 @@ def notify_driver():
             f"Qty / ብዛት:{quantity}\n"
             f"Price / ዋጋ: {price}\n"
             f"Collect from / ክፍያ ከ: {collect_from}\n"
-        )
 
+        )
         message_2 = (
             f"Your Driver Has Been Assigned / ውድ ደንበኛ፣ ሹፌርህ ተመድቧል።\n"
             f"Driver Name / የሾፌር ስም: {driver.get('name', 'N/A')}\n"
@@ -246,15 +243,14 @@ def notify_driver():
             f"Price / ዋጋ: {price}\n"
             f"Thank you for choosing us. Tolo Delivery\n"
         )
-
-        send_sms(driver.get("phone", ""), message)
-        send_sms(senderphone, message_2)
-        send_sms(reciverphone, message_2)
-
-        return {"success": True}
+        send_sms(phone_number=driver.get("phone", ""), message=message)
+        send_sms(phone_number=senderphone, message=message_2)
+        send_sms(phone_number=reciverphone, message=message_2)
     except Exception as e:
-        print("❌ Error notifying driver:", e)
-        return {"success": False, "error": str(e)}, 500
+        print("❌ Error sending SMS to driver:", e)
+        flash("Failed to send SMS.", "danger")
+
+    return redirect(url_for("index"))
 
 @app.route("/feedback")
 def feedback_page():
@@ -280,9 +276,9 @@ def update_price():
 @app.route("/view_feedback")
 def view_feedback():
     try:
-        feedbacks = list(feedback_col.find().sort("_id", -1))  
+        feedbacks = list(feedback_col.find().sort("_id", -1))  # recent first
         for fb in feedbacks:
-            fb["_id"] = str(fb["_id"])
+            fb["_id"] = str(fb["_id"])  # Convert ObjectId to string
         return render_template("view_feedback.html", feedbacks=feedbacks)
     except Exception as e:
         print("❌ Error fetching feedback:", e)
