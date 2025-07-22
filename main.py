@@ -224,7 +224,7 @@ def notify_driver():
             f"New Delivery Order\n "
             f"------------------\n"
             f"from / ከ:{senderphone}\n"
-            f"Location / ቦታ: {dropoff_location}\n"
+            f"Location / ቦታ: {pickup_location }\n"
             f"To / ለ: {reciverphone}\n"
             f"Location / ቦታ:{dropoff_location}\n"
             f"Item / ዕቃ: {item}\n"
