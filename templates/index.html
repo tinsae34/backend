@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Tolo Delivery</title>
-    
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -190,6 +190,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>Source</th>
                     <th>User Name</th>
                     <th>Pickup</th>
                     <th>Drop-off</th>
@@ -214,6 +215,16 @@
             <tbody>
                 {% for d in deliveries %}
                 <tr>
+                    <td>
+                        {% if d.source == 'web' %}
+                        🌐 Web
+                        {% elif d.source == 'bot' %}
+                        🤖 Bot
+                        {% else %}
+                        ❓ Unknown
+                        {% endif %}
+                    </td>
+
                     <td>{{ d.user_name }}</td>
                     <td>{{ d.pickup }}</td>
                     <td>{{ d.dropoff }}</td>
@@ -229,7 +240,7 @@
                     <td>{{ d.status or 'Pending' }}</td>
 
 
-                  
+
                     <td>
                         <select onchange="updatePrice('{{ d._id }}', this.value)" {% if current_tab in
                             ['successful', 'unsuccessful' ] %}disabled{% endif %}>
@@ -268,8 +279,8 @@
                             <input type="hidden" name="delivery_id" value="{{ d._id }}">
                             <button type="submit"
                                 class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
-                                style="background-color: #f39c12;" {% if current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif
-                                %}>
+                                style="background-color: #f39c12;" {% if current_tab in ['successful', 'unsuccessful' ]
+                                %}disabled{% endif %}>
                                 📩 Send SMS
                             </button>
                         </form>
@@ -281,35 +292,30 @@
 
 
 
-                  
+
                     <td>
-                        <form method="POST"
-                            action="{{ url_for('update_status', delivery_id=d._id, new_status='successful') }}"
-                            style="display:inline;">
-                            <button type="submit"
-                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
-                                {% if current_tab in ['successful', 'unsuccessful' ] %}disabled{% endif %}>
-                                ✅
-                            </button>
+                        
+                            <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='successful') }}"
+                                style="display:inline;">
+                                <button type="submit" class="save-button {% if current_tab == 'successful' %}disabled-button{% endif %}" {% if
+                                    current_tab=='successful' %}disabled{% endif %}>
+                                    ✅
+                                </button>
+                            </form>
+                        
+                            <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='unsuccessful') }}"
+                                style="display:inline;">
+                                <button type="submit" class="save-button {% if current_tab == 'unsuccessful' %}disabled-button{% endif %}"
+                                    style="background-color: red;" {% if current_tab=='unsuccessful' %}disabled{% endif %}>
+                                    ❌
+                                </button>
+                            </form>
+                        
 
-
-                        </form>
-
-                        <form method="POST"
-                            action="{{ url_for('update_status', delivery_id=d._id, new_status='unsuccessful') }}"
-                            style="display:inline;">
-                            <button type="submit"
-                                class="save-button {% if current_tab in ['successful', 'unsuccessful'] %}disabled-button{% endif %}"
-                                style="background-color: red;" {% if current_tab in ['successful', 'unsuccessful' ]
-                                %}disabled{% endif %}>
-                                ❌
-                            </button>
-
-                        </form>
 
                     </td>
 
-                  
+
                     <td>
                         <form method="POST" action="{{ url_for('delete_delivery', delivery_id=d._id) }}"
                             style="display:inline;">
@@ -357,7 +363,7 @@
                 body: JSON.stringify({ delivery_id: deliveryId, driver_id: driverId })
             });
 
-            location.reload(); 
+            location.reload();
         }
 
     </script>
