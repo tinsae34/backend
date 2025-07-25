@@ -5,7 +5,7 @@ import os
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 load_dotenv()
@@ -99,6 +99,51 @@ def update_delivery_type():
         print("❌ Error updating delivery type:", e)
         return {"success": False, "error": str(e)}, 500
 
+@app.route("/statistics")
+def statistics():
+    try:
+        now = datetime.now()
+        start_of_week = now - timedelta(days=now.weekday())  # Monday
+        start_of_month = now.replace(day=1)
+
+        # Fetch deliveries
+        deliveries = list(deliveries_col.find())
+
+        # Init counters
+        weekly_count = 0
+        monthly_count = 0
+        weekly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
+        monthly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
+        source_counts = {"bot": 0, "web": 0, "unknown": 0}
+
+        for d in deliveries:
+            try:
+                timestamp = datetime.strptime(d.get("timestamp"), "%Y-%m-%d %H:%M:%S")
+            except:
+                continue
+
+            status = d.get("status", "pending")
+            source = d.get("source", "unknown")
+
+            if timestamp >= start_of_week:
+                weekly_count += 1
+                weekly_status[status] = weekly_status.get(status, 0) + 1
+
+            if timestamp >= start_of_month:
+                monthly_count += 1
+                monthly_status[status] = monthly_status.get(status, 0) + 1
+
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+        return render_template("statistic 3 s.html",
+                               weekly_count=weekly_count,
+                               monthly_count=monthly_count,
+                               weekly_status=weekly_status,
+                               monthly_status=monthly_status,
+                               source_counts=source_counts)
+    except Exception as e:
+        print("❌ Error loading statistics:", e)
+        return "Error loading statistics"
 
 @app.route('/update_status/<delivery_id>/<new_status>', methods=['POST'])
 def update_status(delivery_id, new_status):
@@ -112,6 +157,7 @@ def update_status(delivery_id, new_status):
     )
     flash(f'Delivery status updated to {new_status}.', 'success')
     return redirect(url_for('index', filter_status='pending'))  # adjust as needed
+
 
 
 @app.route("/")
@@ -173,6 +219,8 @@ def index(filter_status=None):
             unsuccessful_count=0,
         )
 
+
+
 @app.route("/assign_driver", methods=["POST"])
 def assign_driver():
     try:
@@ -195,6 +243,7 @@ def assign_driver():
         print("❌ Error in assigning driver:", e)
         return {"success": False, "error": str(e)}, 500
 
+
 @app.route("/notify_driver", methods=["POST"])
 def notify_driver():
     try:
@@ -202,16 +251,16 @@ def notify_driver():
         delivery = deliveries_col.find_one({"_id": ObjectId(delivery_id)})
 
         if not delivery or not delivery.get("assigned_driver_id"):
-            flash("No driver assigned to this delivery.", "warning")
+            flash("⚠️ No driver assigned to this delivery.", "warning")
             return redirect(url_for("index"))
 
         driver = drivers_col.find_one({"_id": ObjectId(delivery["assigned_driver_id"])})
 
         if not driver or not driver.get("phone"):
-            flash("Driver phone number not found.", "danger")
+            flash("❌ Driver phone number not found.", "danger")
             return redirect(url_for("index"))
-       
 
+        # Build SMS messages
         pickup_location = delivery.get("pickup", "N/A")
         senderphone = delivery.get("sender_phone", "N/A")
         dropoff_location = delivery.get("dropoff", "N/A")
@@ -220,19 +269,20 @@ def notify_driver():
         quantity = delivery.get("Quantity", "N/A")
         price = delivery.get("price", "N/A")
         collect_from = delivery.get("payment_from_sender_or_receiver", "N/A")
+
         message = (
-            f"New Delivery Order\n "
+            f"New Delivery Order\n"
             f"------------------\n"
             f"from / ከ:{senderphone}\n"
-            f"Location / ቦታ: {pickup_location }\n"
+            f"Location / ቦታ: {pickup_location}\n"
             f"To / ለ: {reciverphone}\n"
-            f"Location / ቦታ:{dropoff_location}\n"
+            f"Location / ቦታ: {dropoff_location}\n"
             f"Item / ዕቃ: {item}\n"
-            f"Qty / ብዛት:{quantity}\n"
+            f"Qty / ብዛት: {quantity}\n"
             f"Price / ዋጋ: {price}\n"
             f"Collect from / ክፍያ ከ: {collect_from}\n"
-
         )
+
         message_2 = (
             f"Your Driver Has Been Assigned / ውድ ደንበኛ፣ ሹፌርህ ተመድቧል።\n"
             f"Driver Name / የሾፌር ስም: {driver.get('name', 'N/A')}\n"
@@ -243,12 +293,23 @@ def notify_driver():
             f"Price / ዋጋ: {price}\n"
             f"Thank you for choosing us. Tolo Delivery\n"
         )
-        send_sms(phone_number=driver.get("phone", ""), message=message)
-        send_sms(phone_number=senderphone, message=message_2)
-        send_sms(phone_number=reciverphone, message=message_2)
+
+       
+        success1, msg1 = send_sms(phone_number=driver.get("phone", ""), message=message)
+        success2, msg2 = send_sms(phone_number=senderphone, message=message_2)
+        success3, msg3 = send_sms(phone_number=reciverphone, message=message_2)
+
+        if success1 and success2 and success3:
+            flash("✅ SMS notifications sent to driver, sender, and receiver.", "success")
+        else:
+            flash("⚠️ Some SMS messages failed to send.", "warning")
+            if not success1: flash(f"Driver SMS error: {msg1}", "danger")
+            if not success2: flash(f"Sender SMS error: {msg2}", "danger")
+            if not success3: flash(f"Receiver SMS error: {msg3}", "danger")
+
     except Exception as e:
         print("❌ Error sending SMS to driver:", e)
-        flash("Failed to send SMS.", "danger")
+        flash("❌ Failed to send SMS due to an error.", "danger")
 
     return redirect(url_for("index"))
 
@@ -305,7 +366,8 @@ def add_delivery_page():
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "delivery_type": None,
             "assigned_driver_name": "Not Assigned",
-            "status": "pending"
+            "status": "pending",
+            "source": "web"
         }
 
         if not is_valid_ethiopian_number(data["sender_phone"]) or not is_valid_ethiopian_number(data["receiver_phone"]):
