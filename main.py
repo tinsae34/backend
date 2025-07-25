@@ -5,7 +5,7 @@ import os
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 load_dotenv()
@@ -139,6 +139,7 @@ def index(filter_status=None):
         for delivery in deliveries:
             delivery["price"] = delivery.get("price", None)
             delivery["_id"] = str(delivery["_id"])
+            delivery["source"] = delivery.get("source", "unknown") 
             assigned_driver_id = delivery.get("assigned_driver_id")
             if assigned_driver_id:
                 driver = drivers_col.find_one({"_id": ObjectId(assigned_driver_id)})
@@ -305,7 +306,8 @@ def add_delivery_page():
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "delivery_type": None,
             "assigned_driver_name": "Not Assigned",
-            "status": "pending"
+            "status": "pending",
+            "source": "web"
         }
 
         if not is_valid_ethiopian_number(data["sender_phone"]) or not is_valid_ethiopian_number(data["receiver_phone"]):
@@ -318,6 +320,54 @@ def add_delivery_page():
 
     return render_template('add_delivery.html')
 
-if __name__ == "__main__":
+
+@app.route("/statistics")
+def statistics():
+    try:
+        now = datetime.now()
+        start_of_week = now - timedelta(days=now.weekday())  # Monday
+        start_of_month = now.replace(day=1)
+
+        # Fetch deliveries
+        deliveries = list(deliveries_col.find())
+
+        # Init counters
+        weekly_count = 0
+        monthly_count = 0
+        weekly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
+        monthly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
+        source_counts = {"bot": 0, "web": 0, "unknown": 0}
+
+        for d in deliveries:
+            try:
+                timestamp = datetime.strptime(d.get("timestamp"), "%Y-%m-%d %H:%M:%S")
+            except:
+                continue
+
+            status = d.get("status", "pending")
+            source = d.get("source", "unknown")
+
+            if timestamp >= start_of_week:
+                weekly_count += 1
+                weekly_status[status] = weekly_status.get(status, 0) + 1
+
+            if timestamp >= start_of_month:
+                monthly_count += 1
+                monthly_status[status] = monthly_status.get(status, 0) + 1
+
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+        return render_template("statistics.html",
+                               weekly_count=weekly_count,
+                               monthly_count=monthly_count,
+                               weekly_status=weekly_status,
+                               monthly_status=monthly_status,
+                               source_counts=source_counts)
+    except Exception as e:
+        print("❌ Error loading statistics:", e)
+        return "Error loading statistics"
+
+
+if __name__ == "__main__":  
     port = int(os.environ.get("PORT", 3000))
     app.run(debug=False, host="0.0.0.0", port=port)
