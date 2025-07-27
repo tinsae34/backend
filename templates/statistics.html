@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Tolo Delivery Statistics</title>
+    <title>Tolo Delivery - Registration Analytics Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -14,6 +14,7 @@
             color: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
+            margin: 0;
         }
 
         h2 {
@@ -28,143 +29,230 @@
             background-color: #1e90ff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 25px;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 1.1rem;
             cursor: pointer;
             font-weight: 600;
             transition: background-color 0.3s ease;
             user-select: none;
+            width: max-content;
         }
 
         #exportFullReportBtn:hover {
             background-color: #0f65d1;
         }
 
-        .chart-container {
+        .report-section {
             max-width: 900px;
-            margin: 40px auto;
+            margin: 20px auto 60px auto;
             background: #1e1e1e;
             border-radius: 12px;
-            padding: 30px;
+            padding: 25px 35px;
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.3);
+        }
+
+        .report-section h3 {
+            margin-bottom: 20px;
+            color: #1e90ff;
+            border-bottom: 2px solid #1e90ff;
+            padding-bottom: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            border: 1px solid #444;
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #222;
+        }
+
+        canvas {
+            background-color: #121212;
+            border-radius: 8px;
             box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
-            position: relative;
-        }
-
-        .export-pdf-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            background-color: #1e90ff;
-            color: white;
-            border: none;
-            padding: 7px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: background-color 0.3s ease;
-            user-select: none;
-        }
-
-        .export-pdf-btn:hover:not(:disabled) {
-            background-color: #0f65d1;
-        }
-
-        .export-pdf-btn:disabled {
-            background-color: #555;
-            cursor: not-allowed;
         }
     </style>
 </head>
 
 <body>
-    <h2>Tolo Delivery - Statistics Dashboard</h2>
+    <h2>Tolo Delivery - Full Registration Analytics Report</h2>
     <button id="exportFullReportBtn">Export Full Registration Analytics Report PDF</button>
 
     <div id="fullReportSection">
-        <div class="chart-container" id="registrationsSection">
-            <h3>Daily User Registrations (Last 30 Days)</h3>
-            <button class="export-pdf-btn" data-target="registrationsSection">Export PDF</button>
-            <canvas id="registrationsChart"></canvas>
-        </div>
 
-        <div class="chart-container" id="statusSection">
-            <h3>Delivery Status Breakdown</h3>
-            <button class="export-pdf-btn" data-target="statusSection">Export PDF</button>
-            <canvas id="statusChart"></canvas>
-        </div>
+        <section class="report-section" id="overallSummarySection">
+            <h3>Overall Summary</h3>
+            <p>Total Users Registered: <strong>{{ total_users }}</strong></p>
+            <p>Total Deliveries Completed: <strong>{{ total_deliveries }}</strong></p>
+            <p>Average Daily Registrations (Last 30 Days): <strong>{{ avg_daily_registrations }}</strong></p>
+        </section>
 
-        <div class="chart-container" id="serviceTypeSection">
-            <h3>Service Type Distribution</h3>
-            <button class="export-pdf-btn" data-target="serviceTypeSection">Export PDF</button>
-            <canvas id="serviceTypeChart"></canvas>
-        </div>
+        <section class="report-section" id="dailyRegistrationTrendsSection">
+            <h3>Daily Registration Trends (Last 30 Days)</h3>
+            <canvas id="dailyRegistrationChart" width="850" height="350"></canvas>
+        </section>
 
-        <div class="chart-container" id="driverSection">
-            <h3>Deliveries per Driver</h3>
-            <button class="export-pdf-btn" data-target="driverSection">Export PDF</button>
-            <canvas id="driverChart"></canvas>
-        </div>
+        <section class="report-section" id="serviceTypeAnalysisSection">
+            <h3>Service Type Analysis</h3>
+            <canvas id="serviceTypeChart" width="850" height="350"></canvas>
+        </section>
 
-        <div class="chart-container" id="topUsersSection">
-            <h3>Top 5 Users by Deliveries</h3>
-            <canvas id="topUsersChart"></canvas>
-        </div>
-    </div>
+        <section class="report-section" id="driverPerformanceSection">
+            <h3>Driver Performance</h3>
+            <canvas id="driverPerformanceChart" width="850" height="350"></canvas>
+        </section>
 
-    <div class="chart-container">
-        <h3>Route Optimization Overview</h3>
-        <p>Average route length: {{ route_stats.average_route_km }} km</p>
-        <p>Optimized routes: {{ route_stats.optimized_routes }}</p>
-        <p>Non-optimized routes: {{ route_stats.non_optimized_routes }}</p>
+        <section class="report-section" id="locationAnalysisSection">
+            <h3>Location Analysis</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Registrations Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for location, percent in location_registrations.items() %}
+                    <tr>
+                        <td>{{ location }}</td>
+                        <td>{{ "%.2f"|format(percent) }}%</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2" style="text-align:center;">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="report-section" id="last7DaysTrendSection">
+            <h3>Last 7 Days Registration Trend</h3>
+            <canvas id="last7DaysChart" width="850" height="350"></canvas>
+        </section>
+
     </div>
 
     <script>
-        // Chart.js initialization (same as before) ...
-        // (I assume you keep your previous chart code here, no changes needed)
-
-        // PDF export functionality for individual charts (same as before)
         const { jsPDF } = window.jspdf;
 
-        document.querySelectorAll('.export-pdf-btn').forEach(button => {
-            button.addEventListener('click', async () => {
-                const targetId = button.getAttribute('data-target');
-                const element = document.getElementById(targetId);
+        // Chart data passed from Flask (example placeholders):
+        const dailyLabels = {{ registrations_per_day.keys() | list | tojson }};
+        const dailyData = {{ registrations_per_day.values() | list | tojson }};
 
-                if (!element) {
-                    alert('Section not found!');
-                    return;
-                }
+        const serviceTypeLabels = {{ service_type_counts.keys() | list | tojson }};
+        const serviceTypeData = {{ service_type_counts.values() | list | tojson }};
 
-                button.disabled = true;
-                button.textContent = 'Generating PDF...';
+        const driverLabels = {{ driver_counts.keys() | list | tojson }};
+        const driverData = {{ driver_counts.values() | list | tojson }};
 
-                try {
-                    const canvas = await html2canvas(element, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#121212'
-                    });
+        const last7DaysLabels = {{ last_7_days_registrations.keys() | list | tojson }};
+        const last7DaysData = {{ last_7_days_registrations.values() | list | tojson }};
 
-                    const imgData = canvas.toDataURL('image/png');
-
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                    pdf.save(targetId + '_Report.pdf');
-                } catch (err) {
-                    alert('Error generating PDF: ' + err.message);
-                } finally {
-                    button.disabled = false;
-                    button.textContent = 'Export PDF';
-                }
-            });
+        // Daily Registration Trends chart (line)
+        new Chart(document.getElementById('dailyRegistrationChart'), {
+            type: 'line',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Registrations',
+                    data: dailyData,
+                    borderColor: 'rgba(30, 144, 255, 0.8)',
+                    backgroundColor: 'rgba(30, 144, 255, 0.3)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Date' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: true } }
+            }
         });
 
-        // PDF export for the full registration analytics report
+        // Service Type Analysis chart (doughnut)
+        new Chart(document.getElementById('serviceTypeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: serviceTypeLabels,
+                datasets: [{
+                    label: 'Service Type',
+                    data: serviceTypeData,
+                    backgroundColor: ['#ffc107', '#17a2b8', '#6c757d'],
+                    hoverOffset: 15
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        // Driver Performance chart (bar)
+        new Chart(document.getElementById('driverPerformanceChart'), {
+            type: 'bar',
+            data: {
+                labels: driverLabels,
+                datasets: [{
+                    label: 'Deliveries',
+                    data: driverData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Last 7 Days Registration Trend (line)
+        new Chart(document.getElementById('last7DaysChart'), {
+            type: 'line',
+            data: {
+                labels: last7DaysLabels,
+                datasets: [{
+                    label: 'Registrations',
+                    data: last7DaysData,
+                    borderColor: 'rgba(255, 99, 132, 0.8)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.3)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Date' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: true } }
+            }
+        });
+
+        // PDF Export for full report
         document.getElementById('exportFullReportBtn').addEventListener('click', async () => {
             const fullSection = document.getElementById('fullReportSection');
             const button = document.getElementById('exportFullReportBtn');
@@ -185,7 +273,6 @@
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-                // If the content height is larger than page, we can add pages. For simplicity, scale to fit one page.
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
                 pdf.save('Full_Registration_Analytics_Report.pdf');
@@ -197,7 +284,6 @@
             }
         });
     </script>
-
 </body>
 
 </html>
