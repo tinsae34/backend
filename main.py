@@ -8,8 +8,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from collections import Counter, defaultdict
-from io import BytesIO
-from weasyprint import HTML
+
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
