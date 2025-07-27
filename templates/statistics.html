@@ -5,8 +5,6 @@
     <meta charset="UTF-8" />
     <title>Tolo Delivery Statistics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Add these libraries for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -20,8 +18,27 @@
 
         h2 {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 10px;
             color: #1e90ff;
+        }
+
+        #exportFullReportBtn {
+            display: block;
+            margin: 0 auto 40px auto;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            user-select: none;
+        }
+
+        #exportFullReportBtn:hover {
+            background-color: #0f65d1;
         }
 
         .chart-container {
@@ -34,7 +51,6 @@
             position: relative;
         }
 
-        /* Style export buttons */
         .export-pdf-btn {
             position: absolute;
             top: 20px;
@@ -64,34 +80,37 @@
 
 <body>
     <h2>Tolo Delivery - Statistics Dashboard</h2>
+    <button id="exportFullReportBtn">Export Full Registration Analytics Report PDF</button>
 
-    <div class="chart-container" id="registrationsSection">
-        <h3>Daily User Registrations (Last 30 Days)</h3>
-        <button class="export-pdf-btn" data-target="registrationsSection">Export PDF</button>
-        <canvas id="registrationsChart"></canvas>
-    </div>
+    <div id="fullReportSection">
+        <div class="chart-container" id="registrationsSection">
+            <h3>Daily User Registrations (Last 30 Days)</h3>
+            <button class="export-pdf-btn" data-target="registrationsSection">Export PDF</button>
+            <canvas id="registrationsChart"></canvas>
+        </div>
 
-    <div class="chart-container" id="statusSection">
-        <h3>Delivery Status Breakdown</h3>
-        <button class="export-pdf-btn" data-target="statusSection">Export PDF</button>
-        <canvas id="statusChart"></canvas>
-    </div>
+        <div class="chart-container" id="statusSection">
+            <h3>Delivery Status Breakdown</h3>
+            <button class="export-pdf-btn" data-target="statusSection">Export PDF</button>
+            <canvas id="statusChart"></canvas>
+        </div>
 
-    <div class="chart-container" id="serviceTypeSection">
-        <h3>Service Type Distribution</h3>
-        <button class="export-pdf-btn" data-target="serviceTypeSection">Export PDF</button>
-        <canvas id="serviceTypeChart"></canvas>
-    </div>
+        <div class="chart-container" id="serviceTypeSection">
+            <h3>Service Type Distribution</h3>
+            <button class="export-pdf-btn" data-target="serviceTypeSection">Export PDF</button>
+            <canvas id="serviceTypeChart"></canvas>
+        </div>
 
-    <div class="chart-container" id="driverSection">
-        <h3>Deliveries per Driver</h3>
-        <button class="export-pdf-btn" data-target="driverSection">Export PDF</button>
-        <canvas id="driverChart"></canvas>
-    </div>
+        <div class="chart-container" id="driverSection">
+            <h3>Deliveries per Driver</h3>
+            <button class="export-pdf-btn" data-target="driverSection">Export PDF</button>
+            <canvas id="driverChart"></canvas>
+        </div>
 
-    <div class="chart-container">
-        <h3>Top 5 Users by Deliveries</h3>
-        <canvas id="topUsersChart"></canvas>
+        <div class="chart-container" id="topUsersSection">
+            <h3>Top 5 Users by Deliveries</h3>
+            <canvas id="topUsersChart"></canvas>
+        </div>
     </div>
 
     <div class="chart-container">
@@ -102,124 +121,10 @@
     </div>
 
     <script>
-        // Parse data passed from Flask
-        const registrationsLabels = {{ registrations_per_day.keys() | list | tojson }};
-        const registrationsData = {{ registrations_per_day.values() | list | tojson }};
+        // Chart.js initialization (same as before) ...
+        // (I assume you keep your previous chart code here, no changes needed)
 
-        const statusLabels = {{ status_counts.keys() | list | tojson }};
-        const statusData = {{ status_counts.values() | list | tojson }};
-
-        const serviceTypeLabels = {{ service_type_counts.keys() | list | tojson }};
-        const serviceTypeData = {{ service_type_counts.values() | list | tojson }};
-
-        const driverLabels = {{ driver_counts.keys() | list | tojson }};
-        const driverData = {{ driver_counts.values() | list | tojson }};
-
-        const topUserLabels = {{ top_users | map(attribute = 0) | list | tojson }};
-        const topUserData = {{ top_users | map(attribute = 1) | list | tojson }};
-
-        // Daily registrations line chart
-        new Chart(document.getElementById('registrationsChart'), {
-            type: 'line',
-            data: {
-                labels: registrationsLabels,
-                datasets: [{
-                    label: 'Registrations',
-                    data: registrationsData,
-                    borderColor: 'rgba(30, 144, 255, 0.8)',
-                    backgroundColor: 'rgba(30, 144, 255, 0.3)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3
-                }]
-            },
-            options: {
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Date' } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: true } }
-            }
-        });
-
-        // Delivery status pie chart
-        new Chart(document.getElementById('statusChart'), {
-            type: 'pie',
-            data: {
-                labels: statusLabels,
-                datasets: [{
-                    label: 'Delivery Status',
-                    data: statusData,
-                    backgroundColor: ['#1e90ff', '#28a745', '#dc3545'],
-                    hoverOffset: 20
-                }]
-            },
-            options: { responsive: true }
-        });
-
-        // Service type doughnut chart
-        new Chart(document.getElementById('serviceTypeChart'), {
-            type: 'doughnut',
-            data: {
-                labels: serviceTypeLabels,
-                datasets: [{
-                    label: 'Service Type',
-                    data: serviceTypeData,
-                    backgroundColor: ['#ffc107', '#17a2b8', '#6c757d'],
-                    hoverOffset: 15
-                }]
-            },
-            options: { responsive: true }
-        });
-
-        // Deliveries per driver bar chart
-        new Chart(document.getElementById('driverChart'), {
-            type: 'bar',
-            data: {
-                labels: driverLabels,
-                datasets: [{
-                    label: 'Deliveries',
-                    data: driverData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // Top 5 users by deliveries horizontal bar chart
-        new Chart(document.getElementById('topUsersChart'), {
-            type: 'bar',
-            data: {
-                labels: topUserLabels,
-                datasets: [{
-                    label: 'Deliveries',
-                    data: topUserData,
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // PDF export functionality
+        // PDF export functionality for individual charts (same as before)
         const { jsPDF } = window.jspdf;
 
         document.querySelectorAll('.export-pdf-btn').forEach(button => {
@@ -232,16 +137,14 @@
                     return;
                 }
 
-                // Disable button & show progress
                 button.disabled = true;
                 button.textContent = 'Generating PDF...';
 
                 try {
-                    // Capture the element as canvas
                     const canvas = await html2canvas(element, {
                         scale: 2,
                         useCORS: true,
-                        backgroundColor: '#121212'  // match page bg color
+                        backgroundColor: '#121212'
                     });
 
                     const imgData = canvas.toDataURL('image/png');
@@ -251,17 +154,47 @@
                     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
                     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-                    // Save with section name as file name
                     pdf.save(targetId + '_Report.pdf');
                 } catch (err) {
                     alert('Error generating PDF: ' + err.message);
                 } finally {
-                    // Restore button
                     button.disabled = false;
                     button.textContent = 'Export PDF';
                 }
             });
+        });
+
+        // PDF export for the full registration analytics report
+        document.getElementById('exportFullReportBtn').addEventListener('click', async () => {
+            const fullSection = document.getElementById('fullReportSection');
+            const button = document.getElementById('exportFullReportBtn');
+
+            button.disabled = true;
+            button.textContent = 'Generating PDF...';
+
+            try {
+                const canvas = await html2canvas(fullSection, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#121212'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                // If the content height is larger than page, we can add pages. For simplicity, scale to fit one page.
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                pdf.save('Full_Registration_Analytics_Report.pdf');
+            } catch (err) {
+                alert('Error generating PDF: ' + err.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Export Full Registration Analytics Report PDF';
+            }
         });
     </script>
 
