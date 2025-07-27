@@ -5,6 +5,11 @@
     <meta charset="UTF-8" />
     <title>Tolo Delivery Statistics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Add these libraries for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         body {
             background-color: #121212;
@@ -26,6 +31,33 @@
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
+            position: relative;
+        }
+
+        /* Style export buttons */
+        .export-pdf-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            padding: 7px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+            user-select: none;
+        }
+
+        .export-pdf-btn:hover:not(:disabled) {
+            background-color: #0f65d1;
+        }
+
+        .export-pdf-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -33,23 +65,27 @@
 <body>
     <h2>Tolo Delivery - Statistics Dashboard</h2>
 
-    <div class="chart-container">
+    <div class="chart-container" id="registrationsSection">
         <h3>Daily User Registrations (Last 30 Days)</h3>
+        <button class="export-pdf-btn" data-target="registrationsSection">Export PDF</button>
         <canvas id="registrationsChart"></canvas>
     </div>
 
-    <div class="chart-container">
+    <div class="chart-container" id="statusSection">
         <h3>Delivery Status Breakdown</h3>
+        <button class="export-pdf-btn" data-target="statusSection">Export PDF</button>
         <canvas id="statusChart"></canvas>
     </div>
 
-    <div class="chart-container">
+    <div class="chart-container" id="serviceTypeSection">
         <h3>Service Type Distribution</h3>
+        <button class="export-pdf-btn" data-target="serviceTypeSection">Export PDF</button>
         <canvas id="serviceTypeChart"></canvas>
     </div>
 
-    <div class="chart-container">
+    <div class="chart-container" id="driverSection">
         <h3>Deliveries per Driver</h3>
+        <button class="export-pdf-btn" data-target="driverSection">Export PDF</button>
         <canvas id="driverChart"></canvas>
     </div>
 
@@ -181,6 +217,51 @@
                 responsive: true,
                 plugins: { legend: { display: false } }
             }
+        });
+
+        // PDF export functionality
+        const { jsPDF } = window.jspdf;
+
+        document.querySelectorAll('.export-pdf-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const targetId = button.getAttribute('data-target');
+                const element = document.getElementById(targetId);
+
+                if (!element) {
+                    alert('Section not found!');
+                    return;
+                }
+
+                // Disable button & show progress
+                button.disabled = true;
+                button.textContent = 'Generating PDF...';
+
+                try {
+                    // Capture the element as canvas
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#121212'  // match page bg color
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                    // Save with section name as file name
+                    pdf.save(targetId + '_Report.pdf');
+                } catch (err) {
+                    alert('Error generating PDF: ' + err.message);
+                } finally {
+                    // Restore button
+                    button.disabled = false;
+                    button.textContent = 'Export PDF';
+                }
+            });
         });
     </script>
 
