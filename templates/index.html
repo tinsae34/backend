@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Tolo Delivery</title>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -176,6 +176,9 @@
         <a href="{{ url_for('index', filter_status='unsuccessful') }}"
             class="tab unsuccessful {% if current_tab == 'unsuccessful' %}active{% endif %}">
             ❌ Unsuccessful <span style="color:#ffffff;">({{ unsuccessful_count }})</span>
+        </a>
+        <a href="{{ url_for('statistics') }}" class="tab" style="background-color: #2a2a2a; color:white;">
+            📊 Statistics
         </a>
 
         <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color: #2a2a2a; color:white;">

@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import requests
 from datetime import datetime, timedelta
 import re
+from collections import Counter, defaultdict
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -111,7 +112,7 @@ def update_status(delivery_id, new_status):
         {'$set': {'status': new_status}}
     )
     flash(f'Delivery status updated to {new_status}.', 'success')
-    return redirect(url_for('index', filter_status='pending'))  # adjust as needed
+    return redirect(url_for('index', filter_status=new_status))
 
 
 @app.route("/")
@@ -321,53 +322,52 @@ def add_delivery_page():
     return render_template('add_delivery.html')
 
 
-@app.route("/statistics")
+@app.route('/statistics')
 def statistics():
-    try:
-        now = datetime.now()
-        start_of_week = now - timedelta(days=now.weekday())  # Monday
-        start_of_month = now.replace(day=1)
+    # Example: get deliveries and users from MongoDB
+    deliveries = list(db.deliveries.find({}))
+    users = list(db.users.find({}))  # if you track users in DB
+    
+    # Daily registrations (example: users created_at date)
+    today = datetime.utcnow().date()
+    days = [today - timedelta(days=i) for i in reversed(range(30))]
+    registrations_per_day = {d.strftime('%Y-%m-%d'): 0 for d in days}
+    for user in users:
+        reg_date = user.get('created_at')
+        if reg_date:
+            reg_date_str = reg_date.strftime('%Y-%m-%d')
+            if reg_date_str in registrations_per_day:
+                registrations_per_day[reg_date_str] += 1
 
-        # Fetch deliveries
-        deliveries = list(deliveries_col.find())
+    # Delivery status counts
+    status_counts = Counter(d.get('status', 'pending') for d in deliveries)
 
-        # Init counters
-        weekly_count = 0
-        monthly_count = 0
-        weekly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
-        monthly_status = {"pending": 0, "successful": 0, "unsuccessful": 0}
-        source_counts = {"bot": 0, "web": 0, "unknown": 0}
+    # Service type counts
+    service_type_counts = Counter(d.get('delivery_type', 'Not Set') for d in deliveries)
 
-        for d in deliveries:
-            try:
-                timestamp = datetime.strptime(d.get("timestamp"), "%Y-%m-%d %H:%M:%S")
-            except:
-                continue
+    # Deliveries per driver
+    driver_counts = Counter(d.get('assigned_driver_name', 'Not Assigned') for d in deliveries)
 
-            status = d.get("status", "pending")
-            source = d.get("source", "unknown")
+    # User stats: top 5 users by number of deliveries
+    user_counts = Counter(d.get('user_name', 'Unknown') for d in deliveries)
+    top_users = user_counts.most_common(5)
 
-            if timestamp >= start_of_week:
-                weekly_count += 1
-                weekly_status[status] = weekly_status.get(status, 0) + 1
+    # Route optimization (example: average distance or number of optimized routes)
+    # You might calculate total kms or average kms from your delivery data if you have coords
+    # For demo, we send dummy data
+    route_stats = {
+        "average_route_km": 12.5,
+        "optimized_routes": 150,
+        "non_optimized_routes": 30
+    }
 
-            if timestamp >= start_of_month:
-                monthly_count += 1
-                monthly_status[status] = monthly_status.get(status, 0) + 1
-
-            source_counts[source] = source_counts.get(source, 0) + 1
-
-        return render_template("statistics.html",
-                               weekly_count=weekly_count,
-                               monthly_count=monthly_count,
-                               weekly_status=weekly_status,
-                               monthly_status=monthly_status,
-                               source_counts=source_counts)
-    except Exception as e:
-        print("❌ Error loading statistics:", e)
-        return "Error loading statistics"
-
-
+    return render_template('statistics.html',
+                           registrations_per_day=registrations_per_day,
+                           status_counts=status_counts,
+                           service_type_counts=service_type_counts,
+                           driver_counts=driver_counts,
+                           top_users=top_users,
+                           route_stats=route_stats)
 if __name__ == "__main__":  
     port = int(os.environ.get("PORT", 3000))
     app.run(debug=False, host="0.0.0.0", port=port)
