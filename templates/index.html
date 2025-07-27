@@ -294,26 +294,20 @@
 
 
                     <td>
-                        
-                            <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='successful') }}"
-                                style="display:inline;">
-                                <button type="submit" class="save-button {% if current_tab == 'successful' %}disabled-button{% endif %}" {% if
-                                    current_tab=='successful' %}disabled{% endif %}>
-                                    ✅
-                                </button>
-                            </form>
-                        
-                            <form method="POST" action="{{ url_for('update_status', delivery_id=d._id, new_status='unsuccessful') }}"
-                                style="display:inline;">
-                                <button type="submit" class="save-button {% if current_tab == 'unsuccessful' %}disabled-button{% endif %}"
-                                    style="background-color: red;" {% if current_tab=='unsuccessful' %}disabled{% endif %}>
-                                    ❌
-                                </button>
-                            </form>
-                        
-
-
+                        {% if current_tab != 'successful' %}
+                        <button onclick="updateStatus('{{ d._id }}', 'successful', this)" class="save-button">✅</button>
+                        {% else %}
+                        <button class="save-button disabled-button" disabled>✅</button>
+                        {% endif %}
+                    
+                        {% if current_tab != 'unsuccessful' %}
+                        <button onclick="updateStatus('{{ d._id }}', 'unsuccessful', this)" class="save-button"
+                            style="background-color: red;">❌</button>
+                        {% else %}
+                        <button class="save-button disabled-button" style="background-color: red;" disabled>❌</button>
+                        {% endif %}
                     </td>
+
 
 
                     <td>
@@ -340,6 +334,24 @@
     <p style="text-align: center; color: #777;">No delivery records found for this tab.</p>
     {% endif %}
     <script>
+        async function updateStatus(deliveryId, newStatus, button) {
+                button.disabled = true;
+                button.textContent = '⏳';
+
+                const response = await fetch(`/update_status/${deliveryId}/${newStatus}`, {
+                    method: 'POST'
+                });
+
+                if (response.redirected) {
+                    // Redirect to the new tab (status) after successful update
+                    window.location.href = response.url;
+                } else {
+                    // Failed? Revert
+                    button.textContent = newStatus === 'successful' ? '✅' : '❌';
+                    button.disabled = false;
+                    alert('Failed to update status.');
+                }
+            }
         async function updatePrice(deliveryId, price) {
             await fetch('{{ url_for("update_price") }}', {
                 method: 'POST',
