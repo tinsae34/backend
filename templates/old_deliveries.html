@@ -2,84 +2,107 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>Old Deliveries (Older than 12 Hours)</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <style>
         body {
-            background-color: #121212;
-            color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
+            margin: 20px;
+            background-color: #121212;
+            color: #f5f5f5;
+            font-weight: bold;
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 30px;
-            color: #1e90ff;
+            margin-bottom: 20px;
+            color: #ffffff;
         }
 
-        .container {
-            max-width: 1000px;
-            margin: auto;
+        .tabs {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            background-color: #1f1f1f;
+            color: white;
+        }
+
+        .active {
+            box-shadow: 0 0 5px #1e90ff;
+            transform: scale(1.03);
+        }
+
+        .table-container {
+            overflow-x: auto;
             background: #1e1e1e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(30, 144, 255, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(30, 144, 255, 0.2);
         }
 
         table {
-            width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            width: 100%;
+            min-width: 1000px;
         }
 
         th,
         td {
-            padding: 10px 15px;
+            padding: 12px 16px;
+            border: 1px solid #2e2e2e;
             text-align: left;
-            border: 1px solid #333;
+            font-size: 16px;
         }
 
         th {
-            background-color: #1e90ff;
-            color: white;
+            background-color: #2b2b2b;
+            color: #1e90ff;
+            font-weight: 600;
         }
 
         tr:nth-child(even) {
+            background-color: #1a1a1a;
+        }
+
+        tr:hover {
             background-color: #2a2a2a;
         }
 
         a {
             color: #1e90ff;
-            text-decoration: none;
         }
 
-        a:hover {
-            text-decoration: underline;
-        }
+        @media (max-width: 768px) {
 
-        .back-link {
-            margin-top: 20px;
-            display: block;
-            text-align: center;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 20px;
-            background-color: #222;
-            border-radius: 8px;
-            color: #ccc;
+            th,
+            td {
+                font-size: 12px;
+                padding: 10px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Deliveries Older Than 12 Hours</h1>
+    <h1>Deliveries Older Than 12 Hours</h1>
 
-        {% if deliveries %}
+    <div class="tabs">
+        <a href="{{ url_for('index') }}" class="tab">🏠 Dashboard</a>
+        <a href="{{ url_for('statistics') }}" class="tab">📊 Statistics</a>
+        <a href="{{ url_for('map_view') }}" class="tab">🗺️ Map View</a>
+        <a href="{{ url_for('old_deliveries') }}" class="tab active">⏰ Old Deliveries</a>
+        <a href="{{ url_for('view_feedback') }}" class="tab">📋 Feedback</a>
+    </div>
+
+    {% if deliveries %}
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
@@ -114,12 +137,10 @@
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <div class="no-data">No deliveries older than 12 hours found.</div>
-        {% endif %}
-
-        <a href="{{ url_for('index') }}" class="back-link">← Back to Dashboard</a>
     </div>
+    {% else %}
+    <p style="text-align: center; color: #888;">No deliveries older than 12 hours found.</p>
+    {% endif %}
 </body>
 
 </html>

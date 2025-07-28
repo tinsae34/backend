@@ -2,145 +2,269 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Old Deliveries (Older than 12 Hours)</title>
+    <meta charset="UTF-8" />
+    <title>Tolo Delivery Statistics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Add these libraries for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
             background-color: #121212;
-            color: #f5f5f5;
-            font-weight: bold;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #ffffff;
-        }
-
-        .tabs {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            display: inline-block;
-            background-color: #1f1f1f;
             color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
         }
 
-        .active {
-            box-shadow: 0 0 5px #1e90ff;
-            transform: scale(1.03);
+        h2 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #1e90ff;
         }
 
-        .table-container {
-            overflow-x: auto;
+        .chart-container {
+            max-width: 900px;
+            margin: 40px auto;
             background: #1e1e1e;
-            border-radius: 10px;
-            box-shadow: 0 0 12px rgba(30, 144, 255, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
+            position: relative;
         }
 
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            min-width: 1000px;
-        }
-
-        th,
-        td {
-            padding: 12px 16px;
-            border: 1px solid #2e2e2e;
-            text-align: left;
-            font-size: 16px;
-        }
-
-        th {
-            background-color: #2b2b2b;
-            color: #1e90ff;
+        /* Style export buttons */
+        .export-pdf-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            padding: 7px 15px;
+            border-radius: 6px;
+            cursor: pointer;
             font-weight: 600;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+            user-select: none;
         }
 
-        tr:nth-child(even) {
-            background-color: #1a1a1a;
+        .export-pdf-btn:hover:not(:disabled) {
+            background-color: #0f65d1;
         }
 
-        tr:hover {
-            background-color: #2a2a2a;
-        }
-
-        a {
-            color: #1e90ff;
-        }
-
-        @media (max-width: 768px) {
-
-            th,
-            td {
-                font-size: 12px;
-                padding: 10px;
-            }
+        .export-pdf-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
         }
     </style>
 </head>
 
 <body>
-    <h1>Deliveries Older Than 12 Hours</h1>
+    <h2>Tolo Delivery - Statistics Dashboard</h2>
 
-    <div class="tabs">
-        <a href="{{ url_for('index') }}" class="tab">🏠 Dashboard</a>
-        <a href="{{ url_for('statistics') }}" class="tab">📊 Statistics</a>
-        <a href="{{ url_for('map_view') }}" class="tab">🗺️ Map View</a>
-        <a href="{{ url_for('old_deliveries') }}" class="tab active">⏰ Old Deliveries</a>
-        <a href="{{ url_for('view_feedback') }}" class="tab">📋 Feedback</a>
+    <div class="chart-container" id="registrationsSection">
+        <h3>Daily User Registrations (Last 30 Days)</h3>
+        <button class="export-pdf-btn" data-target="registrationsSection">Export PDF</button>
+        <canvas id="registrationsChart"></canvas>
     </div>
 
-    {% if deliveries %}
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Pickup</th>
-                    <th>Dropoff</th>
-                    <th>Sender Phone</th>
-                    <th>Receiver Phone</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Assigned Driver</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for delivery in deliveries %}
-                <tr>
-                    <td>{{ delivery._id }}</td>
-                    <td>{{ delivery.user_name }}</td>
-                    <td>{{ delivery.pickup }}</td>
-                    <td>{{ delivery.dropoff }}</td>
-                    <td>{{ delivery.sender_phone }}</td>
-                    <td>{{ delivery.receiver_phone }}</td>
-                    <td>{{ delivery.Quantity }}</td>
-                    <td>{{ delivery.price or 'N/A' }}</td>
-                    <td>{{ delivery.status }}</td>
-                    <td>{{ delivery.assigned_driver_name }}</td>
-                    <td>{{ delivery.timestamp }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="chart-container" id="statusSection">
+        <h3>Delivery Status Breakdown</h3>
+        <button class="export-pdf-btn" data-target="statusSection">Export PDF</button>
+        <canvas id="statusChart"></canvas>
     </div>
-    {% else %}
-    <p style="text-align: center; color: #888;">No deliveries older than 12 hours found.</p>
-    {% endif %}
+
+    <div class="chart-container" id="serviceTypeSection">
+        <h3>Service Type Distribution</h3>
+        <button class="export-pdf-btn" data-target="serviceTypeSection">Export PDF</button>
+        <canvas id="serviceTypeChart"></canvas>
+    </div>
+
+    <div class="chart-container" id="driverSection">
+        <h3>Deliveries per Driver</h3>
+        <button class="export-pdf-btn" data-target="driverSection">Export PDF</button>
+        <canvas id="driverChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Top 5 Users by Deliveries</h3>
+        <canvas id="topUsersChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h3>Route Optimization Overview</h3>
+        <p>Average route length: {{ route_stats.average_route_km }} km</p>
+        <p>Optimized routes: {{ route_stats.optimized_routes }}</p>
+        <p>Non-optimized routes: {{ route_stats.non_optimized_routes }}</p>
+    </div>
+
+    <script>
+        // Parse data passed from Flask
+        const registrationsLabels = {{ registrations_per_day.keys() | list | tojson }};
+        const registrationsData = {{ registrations_per_day.values() | list | tojson }};
+
+        const statusLabels = {{ status_counts.keys() | list | tojson }};
+        const statusData = {{ status_counts.values() | list | tojson }};
+
+        const serviceTypeLabels = {{ service_type_counts.keys() | list | tojson }};
+        const serviceTypeData = {{ service_type_counts.values() | list | tojson }};
+
+        const driverLabels = {{ driver_counts.keys() | list | tojson }};
+        const driverData = {{ driver_counts.values() | list | tojson }};
+
+        const topUserLabels = {{ top_users | map(attribute = 0) | list | tojson }};
+        const topUserData = {{ top_users | map(attribute = 1) | list | tojson }};
+
+        // Daily registrations line chart
+        new Chart(document.getElementById('registrationsChart'), {
+            type: 'line',
+            data: {
+                labels: registrationsLabels,
+                datasets: [{
+                    label: 'Registrations',
+                    data: registrationsData,
+                    borderColor: 'rgba(30, 144, 255, 0.8)',
+                    backgroundColor: 'rgba(30, 144, 255, 0.3)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Date' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: true } }
+            }
+        });
+
+        // Delivery status pie chart
+        new Chart(document.getElementById('statusChart'), {
+            type: 'pie',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    label: 'Delivery Status',
+                    data: statusData,
+                    backgroundColor: ['#1e90ff', '#28a745', '#dc3545'],
+                    hoverOffset: 20
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        // Service type doughnut chart
+        new Chart(document.getElementById('serviceTypeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: serviceTypeLabels,
+                datasets: [{
+                    label: 'Service Type',
+                    data: serviceTypeData,
+                    backgroundColor: ['#ffc107', '#17a2b8', '#6c757d'],
+                    hoverOffset: 15
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        // Deliveries per driver bar chart
+        new Chart(document.getElementById('driverChart'), {
+            type: 'bar',
+            data: {
+                labels: driverLabels,
+                datasets: [{
+                    label: 'Deliveries',
+                    data: driverData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // Top 5 users by deliveries horizontal bar chart
+        new Chart(document.getElementById('topUsersChart'), {
+            type: 'bar',
+            data: {
+                labels: topUserLabels,
+                datasets: [{
+                    label: 'Deliveries',
+                    data: topUserData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
+                },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // PDF export functionality
+        const { jsPDF } = window.jspdf;
+
+        document.querySelectorAll('.export-pdf-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const targetId = button.getAttribute('data-target');
+                const element = document.getElementById(targetId);
+
+                if (!element) {
+                    alert('Section not found!');
+                    return;
+                }
+
+                // Disable button & show progress
+                button.disabled = true;
+                button.textContent = 'Generating PDF...';
+
+                try {
+                    // Capture the element as canvas
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#121212'  // match page bg color
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                    // Save with section name as file name
+                    pdf.save(targetId + '_Report.pdf');
+                } catch (err) {
+                    alert('Error generating PDF: ' + err.message);
+                } finally {
+                    // Restore button
+                    button.disabled = false;
+                    button.textContent = 'Export PDF';
+                }
+            });
+        });
+    </script>
+
 </body>
 
 </html>
