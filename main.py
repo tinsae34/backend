@@ -8,7 +8,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from collections import Counter, defaultdict
-import folium
+
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
