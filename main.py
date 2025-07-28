@@ -8,7 +8,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from collections import Counter, defaultdict
-
+import folium
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -369,6 +369,17 @@ def statistics():
                            driver_counts=driver_counts,
                            top_users=top_users,
                            route_stats=route_stats)
+
+
+
+@app.route('/map')
+def map_view():
+    deliveries_with_location = list(deliveries_col.find({
+        "latitude": {"$exists": True},
+        "longitude": {"$exists": True}
+    }))
+
+    return render_template('map.html', deliveries=deliveries_with_location)
 
 
 if __name__ == "__main__":  

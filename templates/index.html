@@ -86,13 +86,7 @@
             color: #1e90ff;
             font-weight: 600;
         }
-        tr[data-status="successful"] {
-            background-color: #113311;
-        }
-        tr[data-status="unsuccessful"] {
-            background-color: #331111;
-        }
-
+        
 
         tr:nth-child(even) {
             background-color: #1a1a1a;
@@ -190,6 +184,9 @@
         <a href="{{ url_for('statistics') }}" class="tab" style="background-color: #2a2a2a; color:white;">
             📊 Statistics
         </a>
+        <a href="{{ url_for('map_view') }}" class="tab" style="background-color: #2a2a2a; color:white;">
+            🗺️ Map View
+        </a>
 
         <a href="{{ url_for('view_feedback') }}" class="tab" style="background-color: #2a2a2a; color:white;">
             📋 View Feedback <span style="color: #fff;">({{ feedback_count }})</span>
@@ -202,7 +199,7 @@
     <div class="table-container">
         <table>
             <thead>
-                <tr data-status="{{d.status}}">
+                <tr>
                     <th>Source</th>
                     <th>User Name</th>
                     <th>Pickup</th>
@@ -227,7 +224,7 @@
             </thead>
             <tbody>
                 {% for d in deliveries %}
-                <tr data-status="{{ d.status }}">
+                <tr>
                     <td>
                         {% if d.source == 'web' %}
                         🌐 Web
