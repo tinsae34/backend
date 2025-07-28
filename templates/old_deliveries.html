@@ -5,50 +5,121 @@
     <meta charset="UTF-8" />
     <title>Old Deliveries (Older than 12 Hours)</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1e90ff;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 10px 15px;
+            text-align: left;
+            border: 1px solid #333;
+        }
+
+        th {
+            background-color: #1e90ff;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        a {
+            color: #1e90ff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            background-color: #222;
+            border-radius: 8px;
+            color: #ccc;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Deliveries Older Than 12 Hours</h1>
-    {% if deliveries %}
-    <table border="1" cellpadding="5" cellspacing="0">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Pickup</th>
-                <th>Dropoff</th>
-                <th>Sender Phone</th>
-                <th>Receiver Phone</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Assigned Driver</th>
-                <th>Timestamp</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for delivery in deliveries %}
-            <tr>
-                <td>{{ delivery._id }}</td>
-                <td>{{ delivery.user_name }}</td>
-                <td>{{ delivery.pickup }}</td>
-                <td>{{ delivery.dropoff }}</td>
-                <td>{{ delivery.sender_phone }}</td>
-                <td>{{ delivery.receiver_phone }}</td>
-                <td>{{ delivery.Quantity }}</td>
-                <td>{{ delivery.price or 'N/A' }}</td>
-                <td>{{ delivery.status }}</td>
-                <td>{{ delivery.assigned_driver_name }}</td>
-                <td>{{ delivery.timestamp }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No deliveries older than 12 hours found.</p>
-    {% endif %}
+    <div class="container">
+        <h1>Deliveries Older Than 12 Hours</h1>
 
-    <p><a href="{{ url_for('index') }}">Back to Dashboard</a></p>
+        {% if deliveries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Pickup</th>
+                    <th>Dropoff</th>
+                    <th>Sender Phone</th>
+                    <th>Receiver Phone</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Assigned Driver</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for delivery in deliveries %}
+                <tr>
+                    <td>{{ delivery._id }}</td>
+                    <td>{{ delivery.user_name }}</td>
+                    <td>{{ delivery.pickup }}</td>
+                    <td>{{ delivery.dropoff }}</td>
+                    <td>{{ delivery.sender_phone }}</td>
+                    <td>{{ delivery.receiver_phone }}</td>
+                    <td>{{ delivery.Quantity }}</td>
+                    <td>{{ delivery.price or 'N/A' }}</td>
+                    <td>{{ delivery.status }}</td>
+                    <td>{{ delivery.assigned_driver_name }}</td>
+                    <td>{{ delivery.timestamp }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">No deliveries older than 12 hours found.</div>
+        {% endif %}
+
+        <a href="{{ url_for('index') }}" class="back-link">← Back to Dashboard</a>
+    </div>
 </body>
 
 </html>
