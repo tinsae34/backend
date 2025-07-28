@@ -86,6 +86,13 @@
             color: #1e90ff;
             font-weight: 600;
         }
+        tr[data-status="successful"] {
+            background-color: #113311;
+        }
+        tr[data-status="unsuccessful"] {
+            background-color: #331111;
+        }
+
 
         tr:nth-child(even) {
             background-color: #1a1a1a;
@@ -195,7 +202,7 @@
     <div class="table-container">
         <table>
             <thead>
-                <tr>
+                <tr data-status="{{d.status}}">
                     <th>Source</th>
                     <th>User Name</th>
                     <th>Pickup</th>
@@ -220,7 +227,7 @@
             </thead>
             <tbody>
                 {% for d in deliveries %}
-                <tr>
+                <tr data-status="{{ d.status }}">
                     <td>
                         {% if d.source == 'web' %}
                         🌐 Web
