@@ -8,7 +8,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from collections import Counter, defaultdict
-
+from dateutil import parser
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -323,39 +323,42 @@ def add_delivery_page():
     return render_template('add_delivery.html')
 
 
+
 @app.route('/statistics')
 def statistics():
-    # Example: get deliveries and users from MongoDB
     deliveries = list(db.deliveries.find({}))
-    users = list(db.users.find({}))  # if you track users in DB
-    
-    # Daily registrations (example: users created_at date)
+    users = list(db.users.find({}))  # Make sure you have this collection
+
     today = datetime.utcnow().date()
     days = [today - timedelta(days=i) for i in reversed(range(30))]
     registrations_per_day = {d.strftime('%Y-%m-%d'): 0 for d in days}
+
     for user in users:
         reg_date = user.get('created_at')
         if reg_date:
-            reg_date_str = reg_date.strftime('%Y-%m-%d')
+            # If reg_date is string, parse it to datetime
+            if isinstance(reg_date, str):
+                try:
+                    reg_date_dt = parser.parse(reg_date)
+                except Exception as e:
+                    print(f"Error parsing created_at for user: {e}")
+                    continue
+            elif isinstance(reg_date, datetime):
+                reg_date_dt = reg_date
+            else:
+                continue  # unknown format, skip
+            
+            reg_date_str = reg_date_dt.strftime('%Y-%m-%d')
             if reg_date_str in registrations_per_day:
                 registrations_per_day[reg_date_str] += 1
 
-    # Delivery status counts
+    # Other stats...
     status_counts = Counter(d.get('status', 'pending') for d in deliveries)
-
-    # Service type counts
     service_type_counts = Counter(d.get('delivery_type', 'Not Set') for d in deliveries)
-
-    # Deliveries per driver
     driver_counts = Counter(d.get('assigned_driver_name', 'Not Assigned') for d in deliveries)
-
-    # User stats: top 5 users by number of deliveries
     user_counts = Counter(d.get('user_name', 'Unknown') for d in deliveries)
     top_users = user_counts.most_common(5)
 
-    # Route optimization (example: average distance or number of optimized routes)
-    # You might calculate total kms or average kms from your delivery data if you have coords
-    # For demo, we send dummy data
     route_stats = {
         "average_route_km": 12.5,
         "optimized_routes": 150,
@@ -369,7 +372,6 @@ def statistics():
                            driver_counts=driver_counts,
                            top_users=top_users,
                            route_stats=route_stats)
-
 
 
 @app.route('/map')
