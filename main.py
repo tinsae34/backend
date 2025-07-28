@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import re
 from collections import Counter, defaultdict
 from dateutil import parser
+import pytz 
+
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -374,6 +376,7 @@ def statistics():
                            route_stats=route_stats)
 
 
+
 @app.route('/map')
 def map_view():
     deliveries_with_location = list(deliveries_col.find({
@@ -382,6 +385,47 @@ def map_view():
     }))
 
     return render_template('map.html', deliveries=deliveries_with_location)
+
+
+@app.route("/old_deliveries")
+def old_deliveries():
+    try:
+        # Define your local timezone here; example: East Africa Time (EAT) UTC+3
+        local_tz = pytz.timezone("Africa/Addis_Ababa")
+
+        # Current local time
+        now_local = datetime.now(local_tz)
+
+        # 12 hours ago local time
+        cutoff_time = now_local - timedelta(hours=12)
+
+        # Convert cutoff_time to string in your timestamp format for query
+        # Your timestamp format: "%Y-%m-%d %H:%M:%S"
+        cutoff_str = cutoff_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fetch deliveries older than cutoff_time
+        # Your timestamps are strings so we do string comparison (works if format is ISO-like)
+        old_deliveries = list(deliveries_col.find({
+            "timestamp": {"$lt": cutoff_str}
+        }).sort("timestamp", -1))
+
+        # Convert ObjectId to string and assign driver names as in index()
+        drivers = list(drivers_col.find())
+
+        for delivery in old_deliveries:
+            delivery["_id"] = str(delivery["_id"])
+            assigned_driver_id = delivery.get("assigned_driver_id")
+            if assigned_driver_id:
+                driver = drivers_col.find_one({"_id": ObjectId(assigned_driver_id)})
+                delivery["assigned_driver_name"] = driver.get("name", "Unknown") if driver else "Unknown"
+            else:
+                delivery["assigned_driver_name"] = "Not Assigned"
+
+        return render_template("old_deliveries.html", deliveries=old_deliveries)
+
+    except Exception as e:
+        print("❌ Error fetching old deliveries:", e)
+        return render_template("old_deliveries.html", deliveries=[])
 
 
 if __name__ == "__main__":  

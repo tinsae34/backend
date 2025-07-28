@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Old Deliveries (Older than 12 Hours)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+    <h1>Deliveries Older Than 12 Hours</h1>
+    {% if deliveries %}
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Pickup</th>
+                <th>Dropoff</th>
+                <th>Sender Phone</th>
+                <th>Receiver Phone</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Assigned Driver</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for delivery in deliveries %}
+            <tr>
+                <td>{{ delivery._id }}</td>
+                <td>{{ delivery.user_name }}</td>
+                <td>{{ delivery.pickup }}</td>
+                <td>{{ delivery.dropoff }}</td>
+                <td>{{ delivery.sender_phone }}</td>
+                <td>{{ delivery.receiver_phone }}</td>
+                <td>{{ delivery.Quantity }}</td>
+                <td>{{ delivery.price or 'N/A' }}</td>
+                <td>{{ delivery.status }}</td>
+                <td>{{ delivery.assigned_driver_name }}</td>
+                <td>{{ delivery.timestamp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No deliveries older than 12 hours found.</p>
+    {% endif %}
+
+    <p><a href="{{ url_for('index') }}">Back to Dashboard</a></p>
+</body>
+
+</html>
