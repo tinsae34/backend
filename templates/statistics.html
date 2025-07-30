@@ -20,70 +20,90 @@
 
         h2 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             color: #1e90ff;
         }
 
-        /* Tabs container */
+        /* Tabs styling */
         .tabs {
             max-width: 900px;
-            margin: 0 auto 40px auto;
-            background: #1e1e1e;
-            border-radius: 12px;
-            box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
+            margin: 0 auto 30px;
             display: flex;
-            overflow-x: auto;
-            user-select: none;
+            border-bottom: 2px solid #1e90ff;
         }
 
         .tab {
-            padding: 14px 24px;
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
             cursor: pointer;
-            color: #bbb;
+            user-select: none;
+            background: #1e1e1e;
+            color: white;
             font-weight: 600;
-            white-space: nowrap;
-            border-bottom: 3px solid transparent;
-            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            transition: background-color 0.3s ease;
+            border-bottom: 2px solid transparent;
         }
 
         .tab:hover {
-            color: #1e90ff;
+            background-color: #0f65d1;
         }
 
         .tab.active {
-            color: #1e90ff;
-            border-bottom-color: #1e90ff;
-            font-weight: 700;
+            background-color: #1e90ff;
+            border-bottom: 2px solid #121212;
         }
 
-        /* Tab content containers */
+        /* Tab content */
         .tab-content {
             max-width: 900px;
-            margin: 0 auto;
+            margin: 0 auto 40px;
             background: #1e1e1e;
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
-            display: none;
         }
 
-        .tab-content.active {
+        /* Export all button */
+        #exportAllPdfBtn {
             display: block;
+            margin: 0 auto 30px auto;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            user-select: none;
+            transition: background-color 0.3s ease;
         }
 
-        /* Export button */
+        #exportAllPdfBtn:hover:not(:disabled) {
+            background-color: #0f65d1;
+        }
+
+        #exportAllPdfBtn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Export single section PDF buttons (optional, you can remove if you want) */
         .export-pdf-btn {
             background-color: #1e90ff;
             color: white;
             border: none;
-            padding: 7px 15px;
+            padding: 6px 15px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.9rem;
-            transition: background-color 0.3s ease;
+            margin-bottom: 15px;
             user-select: none;
-            margin-bottom: 20px;
+            transition: background-color 0.3s ease;
         }
 
         .export-pdf-btn:hover:not(:disabled) {
@@ -95,15 +115,35 @@
             cursor: not-allowed;
         }
 
-        /* Period selector style */
-        #periodSelect {
-            margin-left: 8px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            background: #333;
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
             color: white;
+        }
+
+        table thead tr {
+            background-color: #0f65d1;
+        }
+
+        table th,
+        table td {
+            padding: 10px 8px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        /* Period select */
+        #periodSelect {
+            margin-bottom: 15px;
+            padding: 6px 10px;
+            font-size: 1rem;
+            border-radius: 6px;
             border: none;
-            font-weight: 600;
+            background-color: #1e90ff;
+            color: white;
+            cursor: pointer;
+            user-select: none;
         }
     </style>
 </head>
@@ -111,174 +151,132 @@
 <body>
     <h2>Tolo Delivery - Statistics Dashboard</h2>
 
-    <div class="tabs" role="tablist" aria-label="Statistics Tabs">
-        <div class="tab active" role="tab" tabindex="0" aria-selected="true" aria-controls="registrationsTab"
-            id="tab-registrations">Daily Registrations</div>
-        <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="statusTab" id="tab-status">
-            Delivery Status</div>
-        <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="serviceTypeTab"
-            id="tab-serviceType">Service Types</div>
-        <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="driverTab" id="tab-driver">
-            Deliveries per Driver</div>
-        <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="topUsersTab" id="tab-topUsers">
-            Top Users</div>
-        <div class="tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="routeTab" id="tab-route">Route
-            Optimization</div>
+    <button id="exportAllPdfBtn" title="Export all tabs to one PDF">
+        Export All Tabs to PDF
+    </button>
+
+    <div class="tabs">
+        <div class="tab active" data-target="registrationsTab">Daily Registrations</div>
+        <div class="tab" data-target="statusTab">Delivery Status</div>
+        <div class="tab" data-target="serviceTypeTab">Service Type</div>
+        <div class="tab" data-target="driverTab">Deliveries per Driver</div>
+        <div class="tab" data-target="topUsersTab">Top Users</div>
+        <div class="tab" data-target="routeTab">Route Optimization</div>
     </div>
 
-    <!-- Tab Panels -->
-    <section id="registrationsTab" class="tab-content active" role="tabpanel" aria-labelledby="tab-registrations">
-        <h3>Daily User Registrations</h3>
-        <label for="periodSelect" style="display:block; margin-bottom:10px;">
-            Select Period:
-            <select id="periodSelect" aria-label="Select registration period">
-                <option value="7">Last 7 days</option>
-                <option value="14">Last 14 days</option>
-                <option value="30" selected>Last 30 days</option>
-            </select>
-        </label>
-        <button class="export-pdf-btn" data-target="registrationsTab">Export PDF</button>
-        <canvas id="registrationsChart"></canvas>
-    </section>
+    <!-- TAB CONTENTS -->
 
-    <section id="statusTab" class="tab-content" role="tabpanel" aria-labelledby="tab-status">
-        <h3>Delivery Status Breakdown</h3>
+    <div id="registrationsTab" class="tab-content">
+        <label for="periodSelect">Select Period:</label>
+        <select id="periodSelect">
+            <option value="7">Last 7 Days</option>
+            <option value="15">Last 15 Days</option>
+            <option value="30" selected>Last 30 Days</option>
+        </select>
+
+        <button class="export-pdf-btn" data-target="registrationsTableContainer">Export PDF</button>
+
+        <div id="registrationsTableContainer" style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Registrations</th>
+                    </tr>
+                </thead>
+                <tbody id="registrationsTableBody">
+                    <!-- Filled dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="statusTab" class="tab-content" style="display:none;">
         <button class="export-pdf-btn" data-target="statusTab">Export PDF</button>
         <canvas id="statusChart"></canvas>
-    </section>
+    </div>
 
-    <section id="serviceTypeTab" class="tab-content" role="tabpanel" aria-labelledby="tab-serviceType">
-        <h3>Service Type Distribution</h3>
+    <div id="serviceTypeTab" class="tab-content" style="display:none;">
         <button class="export-pdf-btn" data-target="serviceTypeTab">Export PDF</button>
         <canvas id="serviceTypeChart"></canvas>
-    </section>
+    </div>
 
-    <section id="driverTab" class="tab-content" role="tabpanel" aria-labelledby="tab-driver">
-        <h3>Deliveries per Driver</h3>
+    <div id="driverTab" class="tab-content" style="display:none;">
         <button class="export-pdf-btn" data-target="driverTab">Export PDF</button>
         <canvas id="driverChart"></canvas>
-    </section>
+    </div>
 
-    <section id="topUsersTab" class="tab-content" role="tabpanel" aria-labelledby="tab-topUsers">
-        <h3>Top 5 Users by Deliveries</h3>
+    <div id="topUsersTab" class="tab-content" style="display:none;">
         <canvas id="topUsersChart"></canvas>
-    </section>
+    </div>
 
-    <section id="routeTab" class="tab-content" role="tabpanel" aria-labelledby="tab-route">
+    <div id="routeTab" class="tab-content" style="display:none;">
         <h3>Route Optimization Overview</h3>
         <p>Average route length: {{ route_stats.average_route_km }} km</p>
         <p>Optimized routes: {{ route_stats.optimized_routes }}</p>
         <p>Non-optimized routes: {{ route_stats.non_optimized_routes }}</p>
-    </section>
+    </div>
 
     <script>
-        // Tabs functionality
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
+        // Your data passed from Flask (example placeholders here)
+        const registrations_per_day = {{ registrations_per_day | tojson }};
+        const status_counts = {{ status_counts | tojson }};
+        const service_type_counts = {{ service_type_counts | tojson }};
+        const driver_counts = {{ driver_counts | tojson }};
+        const top_users = {{ top_users | tojson }};
+        const route_stats = {{ route_stats | tojson }};
 
+        // TAB SWITCHING LOGIC
+        const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                activateTab(tab.id);
-            });
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
 
-            tab.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                    let newIndex;
-                    const currentIndex = Array.from(tabs).indexOf(e.target);
-                    if (e.key === 'ArrowRight') {
-                        newIndex = (currentIndex + 1) % tabs.length;
-                    } else {
-                        newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-                    }
-                    tabs[newIndex].focus();
-                    activateTab(tabs[newIndex].id);
-                }
+                document.querySelectorAll('.tab-content').forEach(tc => {
+                    tc.style.display = 'none';
+                });
+
+                const target = tab.getAttribute('data-target');
+                document.getElementById(target).style.display = 'block';
             });
         });
 
-        function activateTab(tabId) {
-            tabs.forEach(tab => {
-                const selected = tab.id === tabId;
-                tab.classList.toggle('active', selected);
-                tab.setAttribute('aria-selected', selected);
-                tab.tabIndex = selected ? 0 : -1;
-            });
+        // Populate Daily Registrations Table
+        const registrationsData = Object.entries(registrations_per_day)
+            .map(([date, count]) => ({ date, count }))
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            tabContents.forEach(content => {
-                content.classList.toggle('active', content.id === tabId.replace('tab', 'Tab'));
-            });
-        }
-
-        // Data from Flask
-        const registrationsLabelsFull = {{ registrations_per_day.keys() | list | tojson }};
-        const registrationsDataFull = {{ registrations_per_day.values() | list | tojson }};
-
-        const statusLabels = {{ status_counts.keys() | list | tojson }};
-        const statusData = {{ status_counts.values() | list | tojson }};
-
-        const serviceTypeLabels = {{ service_type_counts.keys() | list | tojson }};
-        const serviceTypeData = {{ service_type_counts.values() | list | tojson }};
-
-        const driverLabels = {{ driver_counts.keys() | list | tojson }};
-        const driverData = {{ driver_counts.values() | list | tojson }};
-
-        const topUserLabels = {{ top_users | map(attribute = 0) | list | tojson }};
-        const topUserData = {{ top_users | map(attribute = 1) | list | tojson }};
-
-        // Registrations chart setup
-        const ctxRegistrations = document.getElementById('registrationsChart').getContext('2d');
-        let registrationsChart = new Chart(ctxRegistrations, {
-            type: 'line',
-            data: {
-                labels: registrationsLabelsFull,
-                datasets: [{
-                    label: 'Registrations',
-                    data: registrationsDataFull,
-                    borderColor: 'rgba(30, 144, 255, 0.8)',
-                    backgroundColor: 'rgba(30, 144, 255, 0.3)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3
-                }]
-            },
-            options: {
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Date' } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Count' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: true } }
-            }
-        });
-
-        // Update registrations chart based on period selected
+        const tableBody = document.getElementById('registrationsTableBody');
         const periodSelect = document.getElementById('periodSelect');
-        function updateRegistrationsChart(days) {
-            const labels = registrationsLabelsFull.slice(-days);
-            const data = registrationsDataFull.slice(-days);
 
-            registrationsChart.data.labels = labels;
-            registrationsChart.data.datasets[0].data = data;
-            registrationsChart.update();
+        function renderRegistrationsTable(days) {
+            tableBody.innerHTML = '';
+            const filteredData = registrationsData.slice(-days);
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.date}</td><td>${row.count}</td>`;
+                tableBody.appendChild(tr);
+            });
         }
 
-        periodSelect.addEventListener('change', () => {
-            updateRegistrationsChart(parseInt(periodSelect.value));
+        // Initial render with default period 30 days
+        renderRegistrationsTable(parseInt(periodSelect.value));
+
+        periodSelect.addEventListener('change', e => {
+            renderRegistrationsTable(parseInt(e.target.value));
         });
 
-        // Initialize with default period
-        updateRegistrationsChart(parseInt(periodSelect.value));
+        // CHARTS
 
-        // Other charts initialization
-
-        // Delivery Status Pie Chart
+        // Status chart
         new Chart(document.getElementById('statusChart'), {
             type: 'pie',
             data: {
-                labels: statusLabels,
+                labels: Object.keys(status_counts),
                 datasets: [{
                     label: 'Delivery Status',
-                    data: statusData,
+                    data: Object.values(status_counts),
                     backgroundColor: ['#1e90ff', '#28a745', '#dc3545'],
                     hoverOffset: 20
                 }]
@@ -286,14 +284,14 @@
             options: { responsive: true }
         });
 
-        // Service Type Doughnut Chart
+        // Service Type chart
         new Chart(document.getElementById('serviceTypeChart'), {
             type: 'doughnut',
             data: {
-                labels: serviceTypeLabels,
+                labels: Object.keys(service_type_counts),
                 datasets: [{
                     label: 'Service Type',
-                    data: serviceTypeData,
+                    data: Object.values(service_type_counts),
                     backgroundColor: ['#ffc107', '#17a2b8', '#6c757d'],
                     hoverOffset: 15
                 }]
@@ -301,14 +299,14 @@
             options: { responsive: true }
         });
 
-        // Deliveries per Driver Bar Chart
+        // Driver chart
         new Chart(document.getElementById('driverChart'), {
             type: 'bar',
             data: {
-                labels: driverLabels,
+                labels: Object.keys(driver_counts),
                 datasets: [{
                     label: 'Deliveries',
-                    data: driverData,
+                    data: Object.values(driver_counts),
                     backgroundColor: 'rgba(54, 162, 235, 0.7)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
@@ -324,16 +322,16 @@
             }
         });
 
-        // Top 5 Users by Deliveries Horizontal Bar Chart
+        // Top users chart
         new Chart(document.getElementById('topUsersChart'), {
             type: 'bar',
             data: {
-                labels: topUserLabels,
+                labels: top_users.map(u => u[0]),
                 datasets: [{
                     label: 'Deliveries',
-                    data: topUserData,
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
+                    data: top_users.map(u => u[1]),
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
                     borderWidth: 1
                 }]
             },
@@ -347,52 +345,131 @@
             }
         });
 
-        // PDF export functionality
+        // --------------------
+        // PDF Export Logic
+        // --------------------
+
         const { jsPDF } = window.jspdf;
 
-        document.querySelectorAll('.export-pdf-btn').forEach(button => {
-            button.addEventListener('click', async () => {
-                const targetId = button.getAttribute('data-target');
-                const element = document.getElementById(targetId);
+        // Export given element (table or div) to PNG image via html2canvas
+        async function exportElementToImage(element) {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#121212'
+            });
+            return canvas.toDataURL('image/png');
+        }
 
-                if (!element) {
-                    alert('Section not found!');
-                    return;
-                }
+        // Export single tab content (for "Export PDF" buttons)
+        document.querySelectorAll('.export-pdf-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = 'Generating PDF...';
 
-                button.disabled = true;
-                button.textContent = 'Generating PDF...';
+                const targetId = btn.getAttribute('data-target');
+                const targetEl = document.getElementById(targetId);
 
                 try {
-                    const canvas = await html2canvas(element, {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#121212'
-                    });
-
-                    const imgData = canvas.toDataURL('image/png');
-
                     const pdf = new jsPDF('p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    let imgData, imgWidth, imgHeight;
 
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-                    let fileName = targetId + '_Report.pdf';
-
-                    if (targetId === 'registrationsTab') {
-                        const selectedDays = periodSelect.value;
-                        fileName = `registrations_last_${selectedDays}_days_Report.pdf`;
+                    if (targetId === 'registrationsTableContainer') {
+                        imgData = await exportElementToImage(targetEl);
+                        imgWidth = pdf.internal.pageSize.getWidth();
+                        imgHeight = (targetEl.offsetHeight * imgWidth) / targetEl.offsetWidth;
+                    } else {
+                        // For charts or divs
+                        const canvas = targetEl.querySelector('canvas');
+                        if (canvas) {
+                            imgData = canvas.toDataURL('image/png');
+                            imgWidth = pdf.internal.pageSize.getWidth();
+                            imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        } else {
+                            imgData = await exportElementToImage(targetEl);
+                            imgWidth = pdf.internal.pageSize.getWidth();
+                            imgHeight = (targetEl.offsetHeight * imgWidth) / targetEl.offsetWidth;
+                        }
                     }
 
-                    pdf.save(fileName);
+                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                    pdf.save(`${targetId}_Report.pdf`);
                 } catch (err) {
                     alert('Error generating PDF: ' + err.message);
                 } finally {
-                    button.disabled = false;
-                    button.textContent = 'Export PDF';
+                    btn.disabled = false;
+                    btn.textContent = 'Export PDF';
                 }
             });
+        });
+
+        // Export ALL tabs combined PDF button logic
+        document.getElementById('exportAllPdfBtn').addEventListener('click', async () => {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            let firstPage = true;
+
+            const exportBtn = document.getElementById('exportAllPdfBtn');
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Generating PDF...';
+
+            try {
+                // 1. Daily Registrations table container
+                const registrationsTableContainer = document.getElementById('registrationsTableContainer');
+                const registrationsImg = await exportElementToImage(registrationsTableContainer);
+                const regImgHeight = (registrationsTableContainer.offsetHeight * pdfWidth) / registrationsTableContainer.offsetWidth;
+                if (!firstPage) pdf.addPage();
+                pdf.addImage(registrationsImg, 'PNG', 0, 0, pdfWidth, regImgHeight);
+                firstPage = false;
+
+                // 2. Delivery Status Chart
+                const statusCanvas = document.querySelector('#statusTab canvas');
+                const statusImg = statusCanvas.toDataURL('image/png');
+                pdf.addPage();
+                pdf.addImage(statusImg, 'PNG', 0, 0, pdfWidth, (statusCanvas.height * pdfWidth) / statusCanvas.width);
+
+                // 3. Service Type Chart
+                const serviceCanvas = document.querySelector('#serviceTypeTab canvas');
+                const serviceImg = serviceCanvas.toDataURL('image/png');
+                pdf.addPage();
+                pdf.addImage(serviceImg, 'PNG', 0, 0, pdfWidth, (serviceCanvas.height * pdfWidth) / serviceCanvas.width);
+
+                // 4. Deliveries per Driver Chart
+                const driverCanvas = document.querySelector('#driverTab canvas');
+                const driverImg = driverCanvas.toDataURL('image/png');
+                pdf.addPage();
+                pdf.addImage(driverImg, 'PNG', 0, 0, pdfWidth, (driverCanvas.height * pdfWidth) / driverCanvas.width);
+
+                // 5. Top Users Chart
+                const topUsersCanvas = document.querySelector('#topUsersTab canvas');
+                const topUsersImg = topUsersCanvas.toDataURL('image/png');
+                pdf.addPage();
+                pdf.addImage(topUsersImg, 'PNG', 0, 0, pdfWidth, (topUsersCanvas.height * pdfWidth) / topUsersCanvas.width);
+
+                // 6. Route Optimization Text
+                const routeSection = document.getElementById('routeTab');
+                // Clone and style for capture
+                const routeClone = routeSection.cloneNode(true);
+                routeClone.style.backgroundColor = '#121212';
+                routeClone.style.padding = '20px';
+                routeClone.style.color = 'white';
+                routeClone.style.width = '600px';
+                routeClone.style.position = 'absolute';
+                routeClone.style.left = '-9999px';
+                document.body.appendChild(routeClone);
+                const routeImg = await exportElementToImage(routeClone);
+                document.body.removeChild(routeClone);
+
+                pdf.addPage();
+                pdf.addImage(routeImg, 'PNG', 0, 0, pdfWidth, (routeClone.offsetHeight * pdfWidth) / routeClone.offsetWidth);
+
+                pdf.save('ToloDelivery_Full_Statistics_Report.pdf');
+            } catch (err) {
+                alert('Error generating combined PDF: ' + err.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.textContent = 'Export All Tabs to PDF';
+            }
         });
     </script>
 </body>
