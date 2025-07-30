@@ -39,6 +39,7 @@ python-engineio==4.12.2
 python-socketio==5.13.0
 python-telegram-bot==22.1
 pytz==2025.2
+reportlab==4.4.3
 requests==2.32.4
 schema==0.7.7
 simple-websocket==1.1.0
