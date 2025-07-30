@@ -505,8 +505,9 @@ def old_deliveries():
         # Fetch deliveries older than cutoff_time
         # Your timestamps are strings so we do string comparison (works if format is ISO-like)
         old_deliveries = list(deliveries_col.find({
-            "timestamp": {"$lt": cutoff_str}
+            "timestamp": {"$exists": True, "$ne": None, "$lt": cutoff_str}
         }).sort("timestamp", -1))
+
 
         # Convert ObjectId to string and assign driver names as in index()
         drivers = list(drivers_col.find())
