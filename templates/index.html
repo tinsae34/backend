@@ -275,7 +275,7 @@
                             <option value="" disabled {% if not d.assigned_driver_name or
                                 d.assigned_driver_name=='Not Assigned' %}selected{% endif %}>Driver</option>
                             {% for driver in drivers %}
-                            <option value="{{ driver.id }}" {% if d.assigned_driver_name==driver.id %}selected{% endif
+                            <option value="{{ driver.id }}" {% if d.assigned_driver_name==driver.name %}selected{% endif
                                 %}>{{ driver.name
                                 }}</option>
                             {% endfor %}
