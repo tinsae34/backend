@@ -10,9 +10,7 @@ import re
 from collections import Counter, defaultdict
 from dateutil import parser
 import pytz 
-from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+
 
 load_dotenv()
 AFRO_TOKEN = os.getenv("AFRO_TOKEN")
@@ -330,46 +328,31 @@ def add_delivery_page():
 
 @app.route('/statistics')
 def statistics():
-    # Parse date filters from query params
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
+    deliveries = list(db.deliveries.find({}))
+    users = list(db.users.find({}))  # Make sure you have this collection
 
-    # Defaults: last 30 days
     today = datetime.utcnow().date()
-    default_start = today - timedelta(days=29)
-    default_end = today
-
-    # Parse dates or fallback
-    try:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else default_start
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else default_end
-    except Exception:
-        start_date = default_start
-        end_date = default_end
-
-    # Prepare date range list
-    days = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+    days = [today - timedelta(days=i) for i in reversed(range(30))]
     registrations_per_day = {d.strftime('%Y-%m-%d'): 0 for d in days}
 
-    users = list(db.users.find({}))
     for user in users:
         reg_date = user.get('created_at')
         if reg_date:
+            # If reg_date is string, parse it to datetime
             if isinstance(reg_date, str):
                 try:
-                    reg_date_dt = parser.parse(reg_date).date()
-                except Exception:
+                    reg_date_dt = parser.parse(reg_date)
+                except Exception as e:
+                    print(f"Error parsing created_at for user: {e}")
                     continue
             elif isinstance(reg_date, datetime):
-                reg_date_dt = reg_date.date()
+                reg_date_dt = reg_date
             else:
-                continue
+                continue  # unknown format, skip
             
             reg_date_str = reg_date_dt.strftime('%Y-%m-%d')
             if reg_date_str in registrations_per_day:
                 registrations_per_day[reg_date_str] += 1
-
-    deliveries = list(db.deliveries.find({}))
 
     # Other stats...
     status_counts = Counter(d.get('status', 'pending') for d in deliveries)
@@ -386,94 +369,12 @@ def statistics():
 
     return render_template('statistics.html',
                            registrations_per_day=registrations_per_day,
-                           start_date=start_date.strftime('%Y-%m-%d'),
-                           end_date=end_date.strftime('%Y-%m-%d'),
                            status_counts=status_counts,
                            service_type_counts=service_type_counts,
                            driver_counts=driver_counts,
                            top_users=top_users,
                            route_stats=route_stats)
 
-
-@app.route('/export_daily_registrations_pdf')
-def export_daily_registrations_pdf():
-    # Similar logic to filter date range from query params
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
-
-    today = datetime.utcnow().date()
-    default_start = today - timedelta(days=29)
-    default_end = today
-
-    try:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else default_start
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else default_end
-    except Exception:
-        start_date = default_start
-        end_date = default_end
-
-    days = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-    registrations_per_day = {d.strftime('%Y-%m-%d'): 0 for d in days}
-
-    users = list(db.users.find({}))
-    for user in users:
-        reg_date = user.get('created_at')
-        if reg_date:
-            if isinstance(reg_date, str):
-                try:
-                    reg_date_dt = parser.parse(reg_date).date()
-                except Exception:
-                    continue
-            elif isinstance(reg_date, datetime):
-                reg_date_dt = reg_date.date()
-            else:
-                continue
-            
-            reg_date_str = reg_date_dt.strftime('%Y-%m-%d')
-            if reg_date_str in registrations_per_day:
-                registrations_per_day[reg_date_str] += 1
-
-    # Generate PDF
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(30, height - 50, "Daily User Registrations Report")
-
-    p.setFont("Helvetica", 12)
-    p.drawString(30, height - 80, f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-
-    # Table headers
-    y = height - 120
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, y, "Date")
-    p.drawString(200, y, "Registrations")
-
-    p.setFont("Helvetica", 12)
-    y -= 20
-
-    for date_str, count in registrations_per_day.items():
-        if y < 50:  # Add new page if near bottom
-            p.showPage()
-            y = height - 50
-            p.setFont("Helvetica-Bold", 12)
-            p.drawString(50, y, "Date")
-            p.drawString(200, y, "Registrations")
-            p.setFont("Helvetica", 12)
-            y -= 20
-
-        p.drawString(50, y, date_str)
-        p.drawString(200, y, str(count))
-        y -= 20
-
-    p.showPage()
-    p.save()
-    buffer.seek(0)
-
-    return send_file(buffer, as_attachment=True,
-                     download_name=f'daily_user_registrations_{start_date}_{end_date}.pdf',
-                     mimetype='application/pdf')
 
 
 @app.route('/map')
@@ -505,9 +406,8 @@ def old_deliveries():
         # Fetch deliveries older than cutoff_time
         # Your timestamps are strings so we do string comparison (works if format is ISO-like)
         old_deliveries = list(deliveries_col.find({
-            "timestamp": {"$exists": True, "$ne": None, "$lt": cutoff_str}
+            "timestamp": {"$lt": cutoff_str}
         }).sort("timestamp", -1))
-
 
         # Convert ObjectId to string and assign driver names as in index()
         drivers = list(drivers_col.find())
