@@ -106,7 +106,6 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>User</th>
                     <th>Pickup</th>
                     <th>Dropoff</th>
@@ -122,7 +121,6 @@
             <tbody>
                 {% for delivery in deliveries %}
                 <tr>
-                    <td>{{ delivery._id }}</td>
                     <td>{{ delivery.user_name }}</td>
                     <td>{{ delivery.pickup }}</td>
                     <td>{{ delivery.dropoff }}</td>
