@@ -1,476 +1,213 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Tolo Delivery Statistics</title>
+    <title>Tolo Statistics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- PDF export libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <style>
         body {
-            background-color: #121212;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #111;
+            color: #eee;
+            font-family: 'Segoe UI', sans-serif;
             padding: 20px;
         }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 40px;
-            color: #1e90ff;
-        }
-
-        /* Tabs styling */
         .tabs {
-            max-width: 900px;
-            margin: 0 auto 30px;
             display: flex;
-            border-bottom: 2px solid #1e90ff;
+            margin-bottom: 20px;
         }
 
         .tab {
-            flex: 1;
-            text-align: center;
-            padding: 12px 0;
+            margin-right: 10px;
+            color: #0af;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: #222;
+            border-radius: 5px;
             cursor: pointer;
-            user-select: none;
-            background: #1e1e1e;
-            color: white;
-            font-weight: 600;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-            transition: background-color 0.3s ease;
-            border-bottom: 2px solid transparent;
-        }
-
-        .tab:hover {
-            background-color: #0f65d1;
         }
 
         .tab.active {
-            background-color: #1e90ff;
-            border-bottom: 2px solid #121212;
+            background: #4CAF50;
+            color: white;
         }
 
-        /* Tab content */
         .tab-content {
-            max-width: 900px;
-            margin: 0 auto 40px;
-            background: #1e1e1e;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 0 12px rgba(30, 144, 255, 0.3);
+            display: none;
         }
 
-        /* Export all button */
-        #exportAllPdfBtn {
+        .tab-content.active {
             display: block;
-            margin: 0 auto 30px auto;
-            background-color: #1e90ff;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 1rem;
-            user-select: none;
-            transition: background-color 0.3s ease;
         }
 
-        #exportAllPdfBtn:hover:not(:disabled) {
-            background-color: #0f65d1;
-        }
-
-        #exportAllPdfBtn:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-        }
-
-        /* Export single section PDF buttons (optional, you can remove if you want) */
-        .export-pdf-btn {
-            background-color: #1e90ff;
-            color: white;
-            border: none;
-            padding: 6px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-            user-select: none;
-            transition: background-color 0.3s ease;
-        }
-
-        .export-pdf-btn:hover:not(:disabled) {
-            background-color: #0f65d1;
-        }
-
-        .export-pdf-btn:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-        }
-
-        /* Table styling */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            color: white;
-        }
-
-        table thead tr {
-            background-color: #0f65d1;
-        }
-
-        table th,
-        table td {
-            padding: 10px 8px;
-            border: 1px solid #333;
-            text-align: center;
-        }
-
-        /* Period select */
-        #periodSelect {
-            margin-bottom: 15px;
-            padding: 6px 10px;
-            font-size: 1rem;
-            border-radius: 6px;
-            border: none;
-            background-color: #1e90ff;
-            color: white;
-            cursor: pointer;
-            user-select: none;
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto 40px;
         }
     </style>
 </head>
 
 <body>
-    <h2>Tolo Delivery - Statistics Dashboard</h2>
+    <h1>📊 Tolo Delivery Statistics Dashboard</h1>
+    <form method="get" style="margin-bottom: 20px;">
+        <label for="days">Filter by days:</label>
+        <select name="days" id="days" onchange="this.form.submit()">
+            {% for d in [7, 14, 30, 60] %}
+            <option value="{{ d }}" {% if selected_days==d %}selected{% endif %}>Last {{ d }} days</option>
+            {% endfor %}
+        </select>
+    </form>
+    <p>Showing data from the last <strong>{{ selected_days }}</strong> days.</p>
+    <form method="get" action="/statistics/export_pdf" style="margin-bottom: 20px;">
+        <input type="hidden" name="days" value="{{ selected_days }}">
+        <button type="submit">📄 Download Registration Analytics PDF</button>
+    </form>
 
-    <button id="exportAllPdfBtn" title="Export all tabs to one PDF">
-        Export All Tabs to PDF
-    </button>
 
     <div class="tabs">
-        <div class="tab active" data-target="registrationsTab">Daily Registrations</div>
-        <div class="tab" data-target="statusTab">Delivery Status</div>
-        <div class="tab" data-target="serviceTypeTab">Service Type</div>
-        <div class="tab" data-target="driverTab">Deliveries per Driver</div>
-        <div class="tab" data-target="topUsersTab">Top Users</div>
-        <div class="tab" data-target="routeTab">Route Optimization</div>
+        <div class="tab active" data-tab="daily">📆 Daily</div>
+        <div class="tab" data-tab="status">🚚 Status</div>
+        <div class="tab" data-tab="type">🛠 Type</div>
+        <div class="tab" data-tab="drivers">🧑‍✈️ Drivers</div>
+        <div class="tab" data-tab="users">👤 Users</div>
     </div>
 
-    <!-- TAB CONTENTS -->
-
-    <div id="registrationsTab" class="tab-content">
-        <label for="periodSelect">Select Period:</label>
-        <select id="periodSelect">
-            <option value="7">Last 7 Days</option>
-            <option value="15">Last 15 Days</option>
-            <option value="30" selected>Last 30 Days</option>
+    <div id="daily" class="tab-content active chart-container">
+        <h2>📆 Daily Deliveries</h2>
+    
+        <label for="daysSelect" style="margin-right:8px;">Filter days:</label>
+        <select id="daysSelect" style="margin-right:15px; padding:4px;">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
         </select>
-
-        <button class="export-pdf-btn" data-target="registrationsTableContainer">Export PDF</button>
-
-        <div id="registrationsTableContainer" style="overflow-x:auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Registrations</th>
-                    </tr>
-                </thead>
-                <tbody id="registrationsTableBody">
-                    <!-- Filled dynamically -->
-                </tbody>
-            </table>
-        </div>
+    
+        <button id="exportDailyPdf"
+            style="margin-bottom: 15px; padding: 8px 12px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">
+            Export Daily Registrations PDF
+        </button>
+    
+        <canvas id="dailyChart"></canvas>
     </div>
+    
+    <script>
+        document.getElementById('exportDailyPdf').addEventListener('click', () => {
+            const days = document.getElementById('daysSelect').value;
+            window.open(`/statistics/export_daily_pdf?days=${days}`, '_blank');
+        });
+    </script>
 
-    <div id="statusTab" class="tab-content" style="display:none;">
-        <button class="export-pdf-btn" data-target="statusTab">Export PDF</button>
+    
+    <script>
+        document.getElementById('exportDailyPdf').addEventListener('click', () => {
+            // Adjust URL if you want to pass filters like days
+            window.open('/statistics/export_daily_pdf', '_blank');
+        });
+    </script>
+
+
+    <div id="status" class="tab-content chart-container">
+        <h2>🚚 Delivery Status</h2>
         <canvas id="statusChart"></canvas>
     </div>
 
-    <div id="serviceTypeTab" class="tab-content" style="display:none;">
-        <button class="export-pdf-btn" data-target="serviceTypeTab">Export PDF</button>
-        <canvas id="serviceTypeChart"></canvas>
+    <div id="type" class="tab-content chart-container">
+        <h2>🛠 Service Type</h2>
+        <canvas id="typeChart"></canvas>
     </div>
 
-    <div id="driverTab" class="tab-content" style="display:none;">
-        <button class="export-pdf-btn" data-target="driverTab">Export PDF</button>
+    <div id="drivers" class="tab-content chart-container">
+        <h2>🧑‍✈️ Deliveries per Driver</h2>
+        
+        <label for="driverDaysSelect" style="margin-right:8px;">Filter days:</label>
+        <select id="driverDaysSelect" style="margin-right:15px; padding:4px;">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30" selected>Last 30 days</option>
+        </select>
+        
+        <button id="exportDriverPdf"
+            style="margin-bottom: 15px; padding: 8px 12px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">
+            Export Successful Deliveries PDF
+        </button>
         <canvas id="driverChart"></canvas>
+        <canvas id="driverChart"></canvas>
+
     </div>
 
-    <div id="topUsersTab" class="tab-content" style="display:none;">
-        <canvas id="topUsersChart"></canvas>
-    </div>
-
-    <div id="routeTab" class="tab-content" style="display:none;">
-        <h3>Route Optimization Overview</h3>
-        <p>Average route length: {{ route_stats.average_route_km }} km</p>
-        <p>Optimized routes: {{ route_stats.optimized_routes }}</p>
-        <p>Non-optimized routes: {{ route_stats.non_optimized_routes }}</p>
+    <div id="users" class="tab-content chart-container">
+        <h2>👤 Unique Users</h2>
+        <p>Total users registered: <strong>{{ total_users }}</strong></p>
     </div>
 
     <script>
-        // Your data passed from Flask (example placeholders here)
-        const registrations_per_day = {{ registrations_per_day | tojson }};
-        const status_counts = {{ status_counts | tojson }};
-        const service_type_counts = {{ service_type_counts | tojson }};
-        const driver_counts = {{ driver_counts | tojson }};
-        const top_users = {{ top_users | tojson }};
-        const route_stats = {{ route_stats | tojson }};
-
-        // TAB SWITCHING LOGIC
-        const tabs = document.querySelectorAll('.tab');
-        tabs.forEach(tab => {
+        // Tab switching logic
+        document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
                 tab.classList.add('active');
-
-                document.querySelectorAll('.tab-content').forEach(tc => {
-                    tc.style.display = 'none';
-                });
-
-                const target = tab.getAttribute('data-target');
-                document.getElementById(target).style.display = 'block';
+                document.getElementById(tab.dataset.tab).classList.add('active');
             });
         });
 
-        // Populate Daily Registrations Table
-        const registrationsData = Object.entries(registrations_per_day)
-            .map(([date, count]) => ({ date, count }))
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        const tableBody = document.getElementById('registrationsTableBody');
-        const periodSelect = document.getElementById('periodSelect');
-
-        function renderRegistrationsTable(days) {
-            tableBody.innerHTML = '';
-            const filteredData = registrationsData.slice(-days);
-            filteredData.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${row.date}</td><td>${row.count}</td>`;
-                tableBody.appendChild(tr);
-            });
-        }
-
-        // Initial render with default period 30 days
-        renderRegistrationsTable(parseInt(periodSelect.value));
-
-        periodSelect.addEventListener('change', e => {
-            renderRegistrationsTable(parseInt(e.target.value));
+        // Daily Chart
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ daily_counts.keys() | list | tojson }},
+            datasets: [{
+                label: 'Deliveries',
+                data: {{ daily_counts.values() | list | tojson }},
+            backgroundColor: '#42a5f5'
+                }]
+            }
         });
 
-        // CHARTS
-
-        // Status chart
+        // Status Chart
         new Chart(document.getElementById('statusChart'), {
             type: 'pie',
             data: {
-                labels: Object.keys(status_counts),
-                datasets: [{
-                    label: 'Delivery Status',
-                    data: Object.values(status_counts),
-                    backgroundColor: ['#1e90ff', '#28a745', '#dc3545'],
-                    hoverOffset: 20
+                labels: {{ status_counts.keys() | list | tojson }},
+            datasets: [{
+                label: 'Status',
+                data: {{ status_counts.values() | list | tojson }},
+            backgroundColor: ['#66bb6a', '#ef5350', '#ffa726']
                 }]
-            },
-            options: { responsive: true }
+            }
         });
 
-        // Service Type chart
-        new Chart(document.getElementById('serviceTypeChart'), {
+        // Type Chart
+        new Chart(document.getElementById('typeChart'), {
             type: 'doughnut',
             data: {
-                labels: Object.keys(service_type_counts),
-                datasets: [{
-                    label: 'Service Type',
-                    data: Object.values(service_type_counts),
-                    backgroundColor: ['#ffc107', '#17a2b8', '#6c757d'],
-                    hoverOffset: 15
+                labels: {{ type_counts.keys() | list | tojson }},
+            datasets: [{
+                    label: 'Type',
+                    data: {{ type_counts.values() | list | tojson }},
+                    backgroundColor: ['#ab47bc', '#29b6f6', '#ffca28']
                 }]
-            },
-            options: { responsive: true }
+            }
         });
 
-        // Driver chart
+        // Driver Chart
         new Chart(document.getElementById('driverChart'), {
             type: 'bar',
             data: {
-                labels: Object.keys(driver_counts),
-                datasets: [{
-                    label: 'Deliveries',
-                    data: Object.values(driver_counts),
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
+                labels: {{ driver_delivery_data.keys() | list | tojson }},
+            datasets: [{
+                label: 'Deliveries',
+                data: {{ driver_delivery_data.values() | list | tojson }},
+            backgroundColor: '#26a69a'
                 }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: false } }
             }
         });
-
-        // Top users chart
-        new Chart(document.getElementById('topUsersChart'), {
-            type: 'bar',
-            data: {
-                labels: top_users.map(u => u[0]),
-                datasets: [{
-                    label: 'Deliveries',
-                    data: top_users.map(u => u[1]),
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)',
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Number of Deliveries' } }
-                },
-                responsive: true,
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // --------------------
-        // PDF Export Logic
-        // --------------------
-
-        const { jsPDF } = window.jspdf;
-
-        // Export given element (table or div) to PNG image via html2canvas
-        async function exportElementToImage(element) {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#121212'
+        document.getElementById('exportDriverPdf').addEventListener('click', () => {
+                const days = document.getElementById('driverDaysSelect').value;
+                window.open(`/statistics/export_driver_pdf?days=${days}`, '_blank');
             });
-            return canvas.toDataURL('image/png');
-        }
 
-        // Export single tab content (for "Export PDF" buttons)
-        document.querySelectorAll('.export-pdf-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                btn.textContent = 'Generating PDF...';
-
-                const targetId = btn.getAttribute('data-target');
-                const targetEl = document.getElementById(targetId);
-
-                try {
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    let imgData, imgWidth, imgHeight;
-
-                    if (targetId === 'registrationsTableContainer') {
-                        imgData = await exportElementToImage(targetEl);
-                        imgWidth = pdf.internal.pageSize.getWidth();
-                        imgHeight = (targetEl.offsetHeight * imgWidth) / targetEl.offsetWidth;
-                    } else {
-                        // For charts or divs
-                        const canvas = targetEl.querySelector('canvas');
-                        if (canvas) {
-                            imgData = canvas.toDataURL('image/png');
-                            imgWidth = pdf.internal.pageSize.getWidth();
-                            imgHeight = (canvas.height * imgWidth) / canvas.width;
-                        } else {
-                            imgData = await exportElementToImage(targetEl);
-                            imgWidth = pdf.internal.pageSize.getWidth();
-                            imgHeight = (targetEl.offsetHeight * imgWidth) / targetEl.offsetWidth;
-                        }
-                    }
-
-                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                    pdf.save(`${targetId}_Report.pdf`);
-                } catch (err) {
-                    alert('Error generating PDF: ' + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Export PDF';
-                }
-            });
-        });
-
-        // Export ALL tabs combined PDF button logic
-        document.getElementById('exportAllPdfBtn').addEventListener('click', async () => {
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            let firstPage = true;
-
-            const exportBtn = document.getElementById('exportAllPdfBtn');
-            exportBtn.disabled = true;
-            exportBtn.textContent = 'Generating PDF...';
-
-            try {
-                // 1. Daily Registrations table container
-                const registrationsTableContainer = document.getElementById('registrationsTableContainer');
-                const registrationsImg = await exportElementToImage(registrationsTableContainer);
-                const regImgHeight = (registrationsTableContainer.offsetHeight * pdfWidth) / registrationsTableContainer.offsetWidth;
-                if (!firstPage) pdf.addPage();
-                pdf.addImage(registrationsImg, 'PNG', 0, 0, pdfWidth, regImgHeight);
-                firstPage = false;
-
-                // 2. Delivery Status Chart
-                const statusCanvas = document.querySelector('#statusTab canvas');
-                const statusImg = statusCanvas.toDataURL('image/png');
-                pdf.addPage();
-                pdf.addImage(statusImg, 'PNG', 0, 0, pdfWidth, (statusCanvas.height * pdfWidth) / statusCanvas.width);
-
-                // 3. Service Type Chart
-                const serviceCanvas = document.querySelector('#serviceTypeTab canvas');
-                const serviceImg = serviceCanvas.toDataURL('image/png');
-                pdf.addPage();
-                pdf.addImage(serviceImg, 'PNG', 0, 0, pdfWidth, (serviceCanvas.height * pdfWidth) / serviceCanvas.width);
-
-                // 4. Deliveries per Driver Chart
-                const driverCanvas = document.querySelector('#driverTab canvas');
-                const driverImg = driverCanvas.toDataURL('image/png');
-                pdf.addPage();
-                pdf.addImage(driverImg, 'PNG', 0, 0, pdfWidth, (driverCanvas.height * pdfWidth) / driverCanvas.width);
-
-                // 5. Top Users Chart
-                const topUsersCanvas = document.querySelector('#topUsersTab canvas');
-                const topUsersImg = topUsersCanvas.toDataURL('image/png');
-                pdf.addPage();
-                pdf.addImage(topUsersImg, 'PNG', 0, 0, pdfWidth, (topUsersCanvas.height * pdfWidth) / topUsersCanvas.width);
-
-                // 6. Route Optimization Text
-                const routeSection = document.getElementById('routeTab');
-                // Clone and style for capture
-                const routeClone = routeSection.cloneNode(true);
-                routeClone.style.backgroundColor = '#121212';
-                routeClone.style.padding = '20px';
-                routeClone.style.color = 'white';
-                routeClone.style.width = '600px';
-                routeClone.style.position = 'absolute';
-                routeClone.style.left = '-9999px';
-                document.body.appendChild(routeClone);
-                const routeImg = await exportElementToImage(routeClone);
-                document.body.removeChild(routeClone);
-
-                pdf.addPage();
-                pdf.addImage(routeImg, 'PNG', 0, 0, pdfWidth, (routeClone.offsetHeight * pdfWidth) / routeClone.offsetWidth);
-
-                pdf.save('ToloDelivery_Full_Statistics_Report.pdf');
-            } catch (err) {
-                alert('Error generating combined PDF: ' + err.message);
-            } finally {
-                exportBtn.disabled = false;
-                exportBtn.textContent = 'Export All Tabs to PDF';
-            }
-        });
     </script>
 </body>
 

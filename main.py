@@ -324,56 +324,413 @@ def add_delivery_page():
 
     return render_template('add_delivery.html')
 
+from collections import defaultdict, Counter
+from dateutil import parser
+from datetime import datetime, timedelta
 
-
-@app.route('/statistics')
+@app.route("/statistics")
 def statistics():
-    deliveries = list(db.deliveries.find({}))
-    users = list(db.users.find({}))  # Make sure you have this collection
+    try:
+        days = int(request.args.get("days", 30))
+        now = datetime.now()
+        since = now - timedelta(days=days)
 
-    today = datetime.utcnow().date()
-    days = [today - timedelta(days=i) for i in reversed(range(30))]
-    registrations_per_day = {d.strftime('%Y-%m-%d'): 0 for d in days}
+        deliveries = list(deliveries_col.find({}))
 
-    for user in users:
-        reg_date = user.get('created_at')
-        if reg_date:
-            # If reg_date is string, parse it to datetime
-            if isinstance(reg_date, str):
+        drivers = list(drivers_col.find({}))
+        total_users = len(set(d.get("sender_phone") for d in deliveries if "sender_phone" in d))
+
+        daily_counts = defaultdict(int)
+        status_counts = Counter()
+        type_counts = Counter()
+        driver_stats = defaultdict(int)
+
+        for d in deliveries:
+            ts = d.get("timestamp")
+
+            # Parse timestamp if string
+            if isinstance(ts, str):
                 try:
-                    reg_date_dt = parser.parse(reg_date)
-                except Exception as e:
-                    print(f"Error parsing created_at for user: {e}")
+                    ts = parser.parse(ts)
+                except Exception:
                     continue
-            elif isinstance(reg_date, datetime):
-                reg_date_dt = reg_date
+
+            if not isinstance(ts, datetime):
+                continue
+
+            # Only count deliveries within the time range
+            if ts < since:
+                continue
+
+            day = ts.strftime("%Y-%m-%d")
+            daily_counts[day] += 1
+
+            status_counts[d.get("status", "pending")] += 1
+
+            # Only count "payable" and "free" service types, group others as unknown
+            delivery_type = (d.get("delivery_type") or "").lower()
+            if delivery_type in ["payable", "free"]:
+                type_counts[delivery_type] += 1
             else:
-                continue  # unknown format, skip
-            
-            reg_date_str = reg_date_dt.strftime('%Y-%m-%d')
-            if reg_date_str in registrations_per_day:
-                registrations_per_day[reg_date_str] += 1
+                type_counts["unknown"] += 1
 
-    # Other stats...
-    status_counts = Counter(d.get('status', 'pending') for d in deliveries)
-    service_type_counts = Counter(d.get('delivery_type', 'Not Set') for d in deliveries)
-    driver_counts = Counter(d.get('assigned_driver_name', 'Not Assigned') for d in deliveries)
-    user_counts = Counter(d.get('user_name', 'Unknown') for d in deliveries)
-    top_users = user_counts.most_common(5)
+            driver_id = d.get("assigned_driver_id")
+            if driver_id:
+                driver_stats[str(driver_id)] += 1
 
-    route_stats = {
-        "average_route_km": 12.5,
-        "optimized_routes": 150,
-        "non_optimized_routes": 30
-    }
+        # Sort daily counts by date ascending
+        daily_counts = dict(sorted(daily_counts.items()))
 
-    return render_template('statistics.html',
-                           registrations_per_day=registrations_per_day,
-                           status_counts=status_counts,
-                           service_type_counts=service_type_counts,
-                           driver_counts=driver_counts,
-                           top_users=top_users,
-                           route_stats=route_stats)
+        driver_name_map = {str(d["_id"]): d.get("name", "Unnamed") for d in drivers}
+        driver_delivery_data = {
+            driver_name_map.get(driver_id, "Unknown"): count
+            for driver_id, count in driver_stats.items()
+        }
+
+        # Optional: Remove 'unknown' from type_counts if you don't want it shown
+        # if "unknown" in type_counts:
+        #     del type_counts["unknown"]
+
+        return render_template("statistics.html",
+                               daily_counts=daily_counts,
+                               status_counts=status_counts,
+                               type_counts=type_counts,
+                               driver_delivery_data=driver_delivery_data,
+                               total_users=total_users,
+                               selected_days=days)
+
+    except Exception as e:
+        print("❌ Error building statistics:", e)
+        return render_template("statistics.html", error=str(e))
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+from reportlab.lib.units import inch
+from io import BytesIO
+
+@app.route("/statistics/export_pdf")
+def export_registration_report_pdf():
+    try:
+        days = int(request.args.get("days", 30))
+        now = datetime.now()
+        since = now - timedelta(days=days)
+
+        deliveries = list(deliveries_col.find({}))
+        drivers = list(drivers_col.find({}))
+
+        total_registrations = 0
+        daily_trends = defaultdict(int)
+        service_type_counts = Counter()
+        location_counts = Counter()
+        driver_success = defaultdict(lambda: {"total": 0, "successful": 0})
+
+        for d in deliveries:
+            ts = d.get("timestamp")
+            if isinstance(ts, str):
+                try:
+                    ts = parser.parse(ts)
+                except Exception:
+                    continue
+            if not isinstance(ts, datetime) or ts < since:
+                continue
+
+            total_registrations += 1
+            date_str = ts.strftime("%Y-%m-%d")
+            daily_trends[date_str] += 1
+
+            service_type = (d.get("delivery_type") or "unknown").lower()
+            if service_type in ["payable", "free"]:
+                service_type_counts[service_type] += 1
+            else:
+                service_type_counts["unknown"] += 1
+
+            location = d.get("pickup") or "Unknown"
+            location_counts[location] += 1
+
+            driver_id = d.get("assigned_driver_id")
+            if driver_id:
+                driver_success[driver_id]["total"] += 1
+                if d.get("status") == "successful":
+                    driver_success[driver_id]["successful"] += 1
+
+        # Start PDF generation
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        elements.append(Paragraph(f"📋 <b>Registration Analytics Report (Last {days} Days)</b>", styles["Title"]))
+        elements.append(Spacer(1, 0.2 * inch))
+
+        def add_table(title, headers, rows):
+            elements.append(Paragraph(f"<b>{title}</b>", styles["Heading3"]))
+            data = [headers] + rows
+            table = Table(data, hAlign='LEFT')
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 0.3 * inch))
+
+        # Section 1: Overall Summary
+        summary_data = [
+            ("Total Registrations", total_registrations),
+            ("Total Drivers", len(drivers)),
+            ("Unique Locations", len(location_counts)),
+            ("Total Payable", service_type_counts["payable"]),
+            ("Total Free", service_type_counts["free"]),
+        ]
+        add_table("🔹 Overall Summary", ["Metric", "Count"], summary_data)
+
+        # Section 2: Daily Registration Trends
+        daily_rows = sorted(daily_trends.items())
+        add_table("📅 Daily Registration Trends", ["Date", "Registrations"], daily_rows)
+
+        # Section 3: Service Type Analysis
+        total_service = sum(service_type_counts.values())
+        service_rows = [
+            (stype.title(), count, f"{(count / total_service * 100):.1f}%")
+            for stype, count in service_type_counts.items()
+        ]
+        add_table("🛠 Service Type Analysis", ["Type", "Count", "Percentage"], service_rows)
+
+        # Section 4: Driver Performance
+        driver_map = {str(d["_id"]): d.get("name", "Unnamed") for d in drivers}
+        driver_rows = []
+        for driver_id, stats in driver_success.items():
+            name = driver_map.get(str(driver_id), "Unknown")
+            total = stats["total"]
+            success = stats["successful"]
+            rate = f"{(success / total * 100):.1f}%" if total else "0%"
+            driver_rows.append((name, total, success, rate))
+        add_table("🧑‍✈️ Driver Performance", ["Driver", "Total", "Successful", "Success Rate"], driver_rows)
+
+        # Section 5: Location Analysis
+        total_locations = sum(location_counts.values())
+        loc_rows = [
+            (loc, count, f"{(count / total_locations * 100):.1f}%")
+            for loc, count in sorted(location_counts.items(), key=lambda x: -x[1])
+        ]
+        add_table("📍 Location Analysis", ["Location", "Registrations", "Percentage"], loc_rows)
+
+        # Build and return
+        doc.build(elements)
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="registration_report.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print("❌ PDF generation error:", e)
+        return "Error generating PDF", 500
+
+
+
+from reportlab.pdfgen import canvas
+
+from dateutil import parser
+from datetime import datetime, timedelta
+
+@app.route("/statistics/export_daily_pdf")
+def export_daily_pdf():
+    try:
+        days = int(request.args.get("days", 30))
+        now = datetime.now()
+        since = now - timedelta(days=days)
+
+        deliveries = list(deliveries_col.find({}))
+
+        daily_stats = defaultdict(lambda: {"successful": 0, "unsuccessful": 0})
+
+        for d in deliveries:
+            ts = d.get("timestamp")
+            if isinstance(ts, str):
+                try:
+                    ts = parser.parse(ts)
+                except Exception:
+                    continue
+            if not isinstance(ts, datetime) or ts < since:
+                continue
+
+            day = ts.strftime("%Y-%m-%d")
+            status = d.get("status", "pending").lower()
+            if status == "successful":
+                daily_stats[day]["successful"] += 1
+            elif status == "unsuccessful":
+                daily_stats[day]["unsuccessful"] += 1
+
+        sorted_days = sorted(daily_stats.keys())
+
+        # PDF generation code same as before...
+
+        # (The rest of the PDF generation code remains unchanged)
+
+        # Prepare PDF
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 40
+
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, y, f"📅 Daily Registrations Report (Last {days} Days)")
+        y -= 30
+
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, "Date")
+        p.drawString(150, y, "Successful")
+        p.drawString(270, y, "Unsuccessful")
+        p.drawString(400, y, "Total")
+        y -= 15
+        p.line(50, y, width - 50, y)
+        y -= 20
+
+        p.setFont("Helvetica", 11)
+        for day in sorted_days:
+            successful = daily_stats[day]["successful"]
+            unsuccessful = daily_stats[day]["unsuccessful"]
+            total = successful + unsuccessful
+
+            p.drawString(50, y, day)
+            p.drawRightString(230, y, str(successful))
+            p.drawRightString(350, y, str(unsuccessful))
+            p.drawRightString(480, y, str(total))
+            y -= 20
+
+            if y < 80:
+                p.showPage()
+                y = height - 40
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(50, y, "Date")
+                p.drawString(150, y, "Successful")
+                p.drawString(270, y, "Unsuccessful")
+                p.drawString(400, y, "Total")
+                y -= 15
+                p.line(50, y, width - 50, y)
+                y -= 20
+                p.setFont("Helvetica", 11)
+
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+
+        return send_file(buffer, as_attachment=True, download_name="daily_registrations_report.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print("❌ Error generating daily registrations PDF:", e)
+        return "Error generating PDF", 500
+
+
+@app.route("/statistics/export_driver_pdf")
+def export_driver_report_pdf():
+    try:
+        days = int(request.args.get("days", 30))
+        now = datetime.now()
+        since = now - timedelta(days=days)
+
+        deliveries = list(deliveries_col.find({}))
+        drivers = list(drivers_col.find({}))
+
+        driver_stats = defaultdict(int)
+        # For daily breakdown: {driver_id: {date_str: count}}
+        driver_daily_breakdown = defaultdict(lambda: defaultdict(int))
+
+        for d in deliveries:
+            ts = d.get("timestamp")
+            if isinstance(ts, str):
+                try:
+                    ts = parser.parse(ts)
+                except Exception:
+                    continue
+            if not isinstance(ts, datetime) or ts < since:
+                continue
+            if d.get("status") != "successful":
+                continue
+
+            driver_id = d.get("assigned_driver_id")
+            if driver_id:
+                driver_stats[str(driver_id)] += 1
+                date_str = ts.strftime("%Y-%m-%d")
+                driver_daily_breakdown[str(driver_id)][date_str] += 1
+
+        # Map driver names
+        driver_name_map = {str(d["_id"]): d.get("name", "Unnamed") for d in drivers}
+        avg_days = max(days, 1)
+
+        # Generate PDF
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 40
+
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, f"🧑‍✈️ Successful Deliveries Report (Last {days} Days)")
+        y -= 30
+
+        # Summary Table Header
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, "Driver")
+        p.drawString(250, y, "Total Deliveries")
+        p.drawString(400, y, "Average per Day")
+        y -= 20
+
+        p.setFont("Helvetica", 10)
+        for driver_id, total in driver_stats.items():
+            if y < 120:
+                p.showPage()
+                y = height - 40
+            name = driver_name_map.get(driver_id, "Unknown")
+            avg_per_day = total / avg_days
+            p.drawString(50, y, str(name))
+            p.drawString(250, y, str(total))
+            p.drawString(400, y, f"{avg_per_day:.2f}")
+            y -= 15
+
+        y -= 30
+
+        # Daily Breakdown Table
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "📅 Daily Breakdown per Driver")
+        y -= 25
+
+        for driver_id, daily_counts in driver_daily_breakdown.items():
+            if y < 80:
+                p.showPage()
+                y = height - 40
+            name = driver_name_map.get(driver_id, "Unknown")
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y, f"Driver: {name}")
+            y -= 20
+
+            p.setFont("Helvetica-Bold", 10)
+            p.drawString(60, y, "Date")
+            p.drawString(200, y, "Deliveries")
+            y -= 15
+
+            p.setFont("Helvetica", 10)
+            for date_str in sorted(daily_counts.keys()):
+                if y < 80:
+                    p.showPage()
+                    y = height - 40
+                count = daily_counts[date_str]
+                p.drawString(60, y, date_str)
+                p.drawString(200, y, str(count))
+                y -= 15
+            y -= 20
+
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="successful_deliveries_report.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print("❌ PDF generation error (driver report):", e)
+        return "Error generating PDF", 500
 
 
 
