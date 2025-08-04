@@ -600,6 +600,9 @@ from reportlab.pdfgen import canvas
 from dateutil import parser
 from datetime import datetime, timedelta
 
+
+
+
 @app.route("/statistics/export_daily_pdf")
 def export_daily_pdf():
     try:
@@ -607,7 +610,7 @@ def export_daily_pdf():
         now = datetime.now()
         since = now - timedelta(days=days)
 
-        deliveries = list(deliveries_col.find({}))
+        deliveries = list(deliveries_col.find({}))  # Python-side timestamp filtering
 
         daily_stats = defaultdict(lambda: {
             "successful": 0,
@@ -618,7 +621,7 @@ def export_daily_pdf():
             "total_price": 0
         })
 
-        total_money_this_week = 0  # Initialize total money sum
+        total_money_this_period = 0
 
         for d in deliveries:
             ts = d.get("timestamp")
@@ -636,20 +639,45 @@ def export_daily_pdf():
 
             if status == "successful":
                 daily_stats[day]["successful"] += 1
+
+                if price == 100:
+                    daily_stats[day]["birr_100"] += 1
+                elif price == 200:
+                    daily_stats[day]["birr_200"] += 1
+                elif price == 300:
+                    daily_stats[day]["birr_300"] += 1
+
+                daily_stats[day]["total_price"] += price
+                total_money_this_period += price
+
             elif status == "unsuccessful":
                 daily_stats[day]["unsuccessful"] += 1
 
-            if price == 100:
-                daily_stats[day]["birr_100"] += 1
-            elif price == 200:
-                daily_stats[day]["birr_200"] += 1
-            elif price == 300:
-                daily_stats[day]["birr_300"] += 1
-
-            daily_stats[day]["total_price"] += price
-            total_money_this_week += price  # Add to total money sum
-
         sorted_days = sorted(daily_stats.keys())
+
+        # ✅ Accurate TOTAL row calculation
+        total_stats = {
+            "successful": 0,
+            "unsuccessful": 0,
+            "birr_100": 0,
+            "birr_200": 0,
+            "birr_300": 0,
+            "total": 0,
+            "total_price": 0
+        }
+
+        for stats in daily_stats.values():
+            total_stats["successful"] += stats.get("successful", 0)
+            total_stats["unsuccessful"] += stats.get("unsuccessful", 0)
+            total_stats["birr_100"] += stats.get("birr_100", 0)
+            total_stats["birr_200"] += stats.get("birr_200", 0)
+            total_stats["birr_300"] += stats.get("birr_300", 0)
+            total_stats["total_price"] += stats.get("total_price", 0)
+
+        total_stats["total"] = total_stats["successful"] + total_stats["unsuccessful"]
+
+        # ✅ Optional debug
+        print("✅ TOTAL STATS:", total_stats)
 
         # Generate PDF
         buffer = BytesIO()
@@ -661,23 +689,20 @@ def export_daily_pdf():
         p.drawString(50, y, f"📅 Daily Registrations Report (Last {days} Days)")
         y -= 25
 
-        # Add total money summary below title
         p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, y, f"💰 Total Money This Period: {total_money_this_week} Br")
+        p.drawString(50, y, f"💰 Total Money This Period: {total_money_this_period} Br")
         y -= 30
 
-        # Header row
-        p.setFont("Helvetica-Bold", 9)
         headers = ["Date", "✔️", "❌", "100 Br", "200 Br", "300 Br", "Total", "Total Price"]
         x_positions = [50, 100, 140, 180, 230, 290, 350, 430]
 
+        p.setFont("Helvetica-Bold", 9)
         for i, header in enumerate(headers):
             p.drawString(x_positions[i], y, header)
         y -= 15
         p.line(50, y, width - 50, y)
         y -= 20
 
-        # Body
         p.setFont("Helvetica", 9)
         for day in sorted_days:
             stats = daily_stats[day]
@@ -691,7 +716,6 @@ def export_daily_pdf():
                 str(stats["successful"] + stats["unsuccessful"]),
                 f"{stats['total_price']} Br"
             ]
-
             for i, val in enumerate(values):
                 p.drawString(x_positions[i], y, val)
             y -= 18
@@ -707,16 +731,37 @@ def export_daily_pdf():
                 y -= 20
                 p.setFont("Helvetica", 9)
 
+        # TOTAL row
+        if y < 80:
+            p.showPage()
+            y = height - 40
+            p.setFont("Helvetica-Bold", 9)
+            for i, header in enumerate(headers):
+                p.drawString(x_positions[i], y, header)
+            y -= 15
+            p.line(50, y, width - 50, y)
+            y -= 20
+
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(50, y, "TOTAL")
+        p.drawString(100, y, str(total_stats["successful"]))
+        p.drawString(140, y, str(total_stats["unsuccessful"]))
+        p.drawString(180, y, str(total_stats["birr_100"]))
+        p.drawString(230, y, str(total_stats["birr_200"]))
+        p.drawString(290, y, str(total_stats["birr_300"]))
+        p.drawString(350, y, str(total_stats["total"]))
+        p.drawString(430, y, f"{total_stats['total_price']} Br")
+
         p.showPage()
         p.save()
         buffer.seek(0)
 
-        return send_file(buffer, as_attachment=True, download_name="daily_registrations_report.pdf", mimetype="application/pdf")
+        filename = f"daily_registrations_report_{now.strftime('%Y-%m-%d')}.pdf"
+        return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
     except Exception as e:
         print("❌ Error generating daily registrations PDF:", e)
         return "Error generating PDF", 500
-
 
 @app.route("/statistics/export_driver_pdf")
 def export_driver_report_pdf():
@@ -728,7 +773,6 @@ def export_driver_report_pdf():
         deliveries = list(deliveries_col.find({}))
         drivers = list(drivers_col.find({}))
 
-        # Track count, total_price, and count per price category per driver
         driver_stats = defaultdict(lambda: {
             "count": 0,
             "total_price": 0,
@@ -736,7 +780,7 @@ def export_driver_report_pdf():
             "birr_200": 0,
             "birr_300": 0,
         })
-        # For daily breakdown: {driver_id: {date_str: count}}
+
         driver_daily_breakdown = defaultdict(lambda: defaultdict(int))
 
         for d in deliveries:
@@ -748,7 +792,7 @@ def export_driver_report_pdf():
                     continue
             if not isinstance(ts, datetime) or ts < since:
                 continue
-            if d.get("status") != "successful":
+            if d.get("status", "").lower() != "successful":
                 continue
 
             driver_id = d.get("assigned_driver_id")
@@ -767,9 +811,11 @@ def export_driver_report_pdf():
                 date_str = ts.strftime("%Y-%m-%d")
                 driver_daily_breakdown[str(driver_id)][date_str] += 1
 
-        # Map driver names
         driver_name_map = {str(d["_id"]): d.get("name", "Unnamed") for d in drivers}
         avg_days = max(days, 1)
+
+        # Build full date list for the report period
+        date_list = [(since + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
 
         # Generate PDF
         buffer = BytesIO()
@@ -781,16 +827,18 @@ def export_driver_report_pdf():
         p.drawString(50, y, f"🧑‍✈️ Successful Deliveries Report (Last {days} Days)")
         y -= 30
 
-        # Summary Table Header - added price breakdown columns
+        # Summary Table
         p.setFont("Helvetica-Bold", 10)
         headers = ["Driver", "100 Br", "200 Br", "300 Br", "Total Deliveries", "Total Price", "Avg/Day"]
         x_positions = [50, 160, 210, 260, 320, 420, 500]
-
         for i, header in enumerate(headers):
             p.drawString(x_positions[i], y, header)
         y -= 20
 
         p.setFont("Helvetica", 9)
+
+        totals = {"birr_100": 0, "birr_200": 0, "birr_300": 0, "count": 0, "total_price": 0}
+
         for driver_id, stats in driver_stats.items():
             if y < 120:
                 p.showPage()
@@ -818,9 +866,24 @@ def export_driver_report_pdf():
             p.drawRightString(x_positions[6] + 40, y, f"{avg_per_day:.2f}")
             y -= 15
 
+            totals["birr_100"] += count_100
+            totals["birr_200"] += count_200
+            totals["birr_300"] += count_300
+            totals["count"] += total
+            totals["total_price"] += total_price
+
+        # TOTAL ROW
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(x_positions[0], y, "TOTAL")
+        p.drawRightString(x_positions[1] + 30, y, str(totals["birr_100"]))
+        p.drawRightString(x_positions[2] + 30, y, str(totals["birr_200"]))
+        p.drawRightString(x_positions[3] + 30, y, str(totals["birr_300"]))
+        p.drawRightString(x_positions[4] + 40, y, str(totals["count"]))
+        p.drawRightString(x_positions[5] + 60, y, f"{totals['total_price']} Br")
+        p.drawRightString(x_positions[6] + 40, y, f"{totals['count'] / avg_days:.2f}")
         y -= 30
 
-        # Daily Breakdown Table (unchanged)
+        # Daily Breakdown Section
         p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, "📅 Daily Breakdown per Driver")
         y -= 25
@@ -840,11 +903,11 @@ def export_driver_report_pdf():
             y -= 15
 
             p.setFont("Helvetica", 10)
-            for date_str in sorted(daily_counts.keys()):
+            for date_str in date_list:
                 if y < 80:
                     p.showPage()
                     y = height - 40
-                count = daily_counts[date_str]
+                count = daily_counts.get(date_str, 0)
                 p.drawString(60, y, date_str)
                 p.drawString(200, y, str(count))
                 y -= 15
