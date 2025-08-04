@@ -30,6 +30,9 @@ drivers_ = client["drivers"]
 drivers_col = drivers_["drivers"]
 feedback_col = db["feedback"]
 
+bot_events_col = db.bot_events     
+deliveries_col = db.deliveries 
+
 def send_sms(phone_number, message):
     session = requests.Session()
     # base url
@@ -328,16 +331,34 @@ from collections import defaultdict, Counter
 from dateutil import parser
 from datetime import datetime, timedelta
 
+
+
 @app.route("/statistics")
 def statistics():
     try:
-        days = int(request.args.get("days", 30))
+        # Active tab (default to 'daily')
+        active_tab = request.args.get("tab", "daily")
+
+        # Separate day filters with fallback to 30
+        try:
+            days_daily = int(request.args.get("days_daily", 30))
+        except (TypeError, ValueError):
+            days_daily = 30
+
+        try:
+            days_drivers = int(request.args.get("days_drivers", 30))
+        except (TypeError, ValueError):
+            days_drivers = 30
+
         now = datetime.now()
-        since = now - timedelta(days=days)
+
+        # Calculate cutoff times for daily and drivers filtering
+        since_daily = now - timedelta(days=days_daily)
+        since_drivers = now - timedelta(days=days_drivers)
 
         deliveries = list(deliveries_col.find({}))
-
         drivers = list(drivers_col.find({}))
+
         total_users = len(set(d.get("sender_phone") for d in deliveries if "sender_phone" in d))
 
         daily_counts = defaultdict(int)
@@ -345,59 +366,101 @@ def statistics():
         type_counts = Counter()
         driver_stats = defaultdict(int)
 
+        sender_counts = defaultdict(lambda: {"sent": 0, "location": "Unknown"})
+        receiver_counts = defaultdict(lambda: {"received": 0, "location": "Unknown"})
+
         for d in deliveries:
             ts = d.get("timestamp")
-
-            # Parse timestamp if string
             if isinstance(ts, str):
                 try:
                     ts = parser.parse(ts)
                 except Exception:
                     continue
-
             if not isinstance(ts, datetime):
                 continue
 
-            # Only count deliveries within the time range
-            if ts < since:
-                continue
+            # Filter for daily stats by days_daily
+            if ts >= since_daily:
+                day = ts.strftime("%Y-%m-%d")
+                daily_counts[day] += 1
+                status_counts[d.get("status", "pending")] += 1
+                delivery_type = (d.get("delivery_type") or "").lower()
+                if delivery_type in ["payable", "free"]:
+                    type_counts[delivery_type] += 1
+                else:
+                    type_counts["unknown"] += 1
 
-            day = ts.strftime("%Y-%m-%d")
-            daily_counts[day] += 1
+                # Track sender/receiver for daily filter range only
+                sender = d.get("sender_phone")
+                receiver = d.get("receiver_phone")
+                if sender:
+                    sender_counts[sender]["sent"] += 1
+                    sender_counts[sender]["location"] = d.get("pickup", "Unknown")
+                if receiver:
+                    receiver_counts[receiver]["received"] += 1
+                    receiver_counts[receiver]["location"] = d.get("dropoff", "Unknown")
 
-            status_counts[d.get("status", "pending")] += 1
+            # Filter for driver stats by days_drivers
+            if ts >= since_drivers:
+                driver_id = d.get("assigned_driver_id")
+                if driver_id:
+                    driver_stats[str(driver_id)] += 1
 
-            # Only count "payable" and "free" service types, group others as unknown
-            delivery_type = (d.get("delivery_type") or "").lower()
-            if delivery_type in ["payable", "free"]:
-                type_counts[delivery_type] += 1
-            else:
-                type_counts["unknown"] += 1
-
-            driver_id = d.get("assigned_driver_id")
-            if driver_id:
-                driver_stats[str(driver_id)] += 1
-
-        # Sort daily counts by date ascending
         daily_counts = dict(sorted(daily_counts.items()))
-
         driver_name_map = {str(d["_id"]): d.get("name", "Unnamed") for d in drivers}
         driver_delivery_data = {
             driver_name_map.get(driver_id, "Unknown"): count
             for driver_id, count in driver_stats.items()
         }
 
-        # Optional: Remove 'unknown' from type_counts if you don't want it shown
-        # if "unknown" in type_counts:
-        #     del type_counts["unknown"]
+        # Top senders/receivers based on daily_counts range
+        top_senders = sorted([
+            {"phone": phone, "sent": data["sent"], "location": data["location"]}
+            for phone, data in sender_counts.items()
+        ], key=lambda x: x["sent"], reverse=True)[:10]
+
+        top_receivers = sorted([
+            {"phone": phone, "received": data["received"], "location": data["location"]}
+            for phone, data in receiver_counts.items()
+        ], key=lambda x: x["received"], reverse=True)[:10]
+
+        # Combine all customers (senders + receivers)
+        all_customers = {}
+        for phone, data in sender_counts.items():
+            all_customers[phone] = {
+                "phone": phone,
+                "location": data["location"],
+                "sent": data["sent"],
+                "received": 0,
+                "total": data["sent"]
+            }
+        for phone, data in receiver_counts.items():
+            if phone in all_customers:
+                all_customers[phone]["received"] = data["received"]
+                all_customers[phone]["total"] += data["received"]
+            else:
+                all_customers[phone] = {
+                    "phone": phone,
+                    "location": data["location"],
+                    "sent": 0,
+                    "received": data["received"],
+                    "total": data["received"]
+                }
+
+        all_customers_list = sorted(all_customers.values(), key=lambda x: x["total"], reverse=True)
 
         return render_template("statistics.html",
+                               active_tab=active_tab,
+                               days_daily=days_daily,
+                               days_drivers=days_drivers,
                                daily_counts=daily_counts,
                                status_counts=status_counts,
                                type_counts=type_counts,
                                driver_delivery_data=driver_delivery_data,
                                total_users=total_users,
-                               selected_days=days)
+                               top_senders=top_senders,
+                               top_receivers=top_receivers,
+                               all_customers=all_customers_list)
 
     except Exception as e:
         print("❌ Error building statistics:", e)
@@ -546,7 +609,16 @@ def export_daily_pdf():
 
         deliveries = list(deliveries_col.find({}))
 
-        daily_stats = defaultdict(lambda: {"successful": 0, "unsuccessful": 0})
+        daily_stats = defaultdict(lambda: {
+            "successful": 0,
+            "unsuccessful": 0,
+            "birr_100": 0,
+            "birr_200": 0,
+            "birr_300": 0,
+            "total_price": 0
+        })
+
+        total_money_this_week = 0  # Initialize total money sum
 
         for d in deliveries:
             ts = d.get("timestamp")
@@ -560,60 +632,80 @@ def export_daily_pdf():
 
             day = ts.strftime("%Y-%m-%d")
             status = d.get("status", "pending").lower()
+            price = int(d.get("price", 0))
+
             if status == "successful":
                 daily_stats[day]["successful"] += 1
             elif status == "unsuccessful":
                 daily_stats[day]["unsuccessful"] += 1
 
+            if price == 100:
+                daily_stats[day]["birr_100"] += 1
+            elif price == 200:
+                daily_stats[day]["birr_200"] += 1
+            elif price == 300:
+                daily_stats[day]["birr_300"] += 1
+
+            daily_stats[day]["total_price"] += price
+            total_money_this_week += price  # Add to total money sum
+
         sorted_days = sorted(daily_stats.keys())
 
-        # PDF generation code same as before...
-
-        # (The rest of the PDF generation code remains unchanged)
-
-        # Prepare PDF
+        # Generate PDF
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
         y = height - 40
 
-        p.setFont("Helvetica-Bold", 16)
+        p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, f"📅 Daily Registrations Report (Last {days} Days)")
+        y -= 25
+
+        # Add total money summary below title
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, f"💰 Total Money This Period: {total_money_this_week} Br")
         y -= 30
 
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, y, "Date")
-        p.drawString(150, y, "Successful")
-        p.drawString(270, y, "Unsuccessful")
-        p.drawString(400, y, "Total")
+        # Header row
+        p.setFont("Helvetica-Bold", 9)
+        headers = ["Date", "✔️", "❌", "100 Br", "200 Br", "300 Br", "Total", "Total Price"]
+        x_positions = [50, 100, 140, 180, 230, 290, 350, 430]
+
+        for i, header in enumerate(headers):
+            p.drawString(x_positions[i], y, header)
         y -= 15
         p.line(50, y, width - 50, y)
         y -= 20
 
-        p.setFont("Helvetica", 11)
+        # Body
+        p.setFont("Helvetica", 9)
         for day in sorted_days:
-            successful = daily_stats[day]["successful"]
-            unsuccessful = daily_stats[day]["unsuccessful"]
-            total = successful + unsuccessful
+            stats = daily_stats[day]
+            values = [
+                day,
+                str(stats["successful"]),
+                str(stats["unsuccessful"]),
+                str(stats["birr_100"]),
+                str(stats["birr_200"]),
+                str(stats["birr_300"]),
+                str(stats["successful"] + stats["unsuccessful"]),
+                f"{stats['total_price']} Br"
+            ]
 
-            p.drawString(50, y, day)
-            p.drawRightString(230, y, str(successful))
-            p.drawRightString(350, y, str(unsuccessful))
-            p.drawRightString(480, y, str(total))
-            y -= 20
+            for i, val in enumerate(values):
+                p.drawString(x_positions[i], y, val)
+            y -= 18
 
             if y < 80:
                 p.showPage()
                 y = height - 40
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(50, y, "Date")
-                p.drawString(150, y, "Successful")
-                p.drawString(270, y, "Unsuccessful")
-                p.drawString(400, y, "Total")
+                p.setFont("Helvetica-Bold", 9)
+                for i, header in enumerate(headers):
+                    p.drawString(x_positions[i], y, header)
                 y -= 15
                 p.line(50, y, width - 50, y)
                 y -= 20
-                p.setFont("Helvetica", 11)
+                p.setFont("Helvetica", 9)
 
         p.showPage()
         p.save()
@@ -636,7 +728,14 @@ def export_driver_report_pdf():
         deliveries = list(deliveries_col.find({}))
         drivers = list(drivers_col.find({}))
 
-        driver_stats = defaultdict(int)
+        # Track count, total_price, and count per price category per driver
+        driver_stats = defaultdict(lambda: {
+            "count": 0,
+            "total_price": 0,
+            "birr_100": 0,
+            "birr_200": 0,
+            "birr_300": 0,
+        })
         # For daily breakdown: {driver_id: {date_str: count}}
         driver_daily_breakdown = defaultdict(lambda: defaultdict(int))
 
@@ -653,8 +752,18 @@ def export_driver_report_pdf():
                 continue
 
             driver_id = d.get("assigned_driver_id")
+            price = int(d.get("price", 0))
             if driver_id:
-                driver_stats[str(driver_id)] += 1
+                driver_stats[str(driver_id)]["count"] += 1
+                driver_stats[str(driver_id)]["total_price"] += price
+
+                if price == 100:
+                    driver_stats[str(driver_id)]["birr_100"] += 1
+                elif price == 200:
+                    driver_stats[str(driver_id)]["birr_200"] += 1
+                elif price == 300:
+                    driver_stats[str(driver_id)]["birr_300"] += 1
+
                 date_str = ts.strftime("%Y-%m-%d")
                 driver_daily_breakdown[str(driver_id)][date_str] += 1
 
@@ -672,28 +781,46 @@ def export_driver_report_pdf():
         p.drawString(50, y, f"🧑‍✈️ Successful Deliveries Report (Last {days} Days)")
         y -= 30
 
-        # Summary Table Header
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, y, "Driver")
-        p.drawString(250, y, "Total Deliveries")
-        p.drawString(400, y, "Average per Day")
+        # Summary Table Header - added price breakdown columns
+        p.setFont("Helvetica-Bold", 10)
+        headers = ["Driver", "100 Br", "200 Br", "300 Br", "Total Deliveries", "Total Price", "Avg/Day"]
+        x_positions = [50, 160, 210, 260, 320, 420, 500]
+
+        for i, header in enumerate(headers):
+            p.drawString(x_positions[i], y, header)
         y -= 20
 
-        p.setFont("Helvetica", 10)
-        for driver_id, total in driver_stats.items():
+        p.setFont("Helvetica", 9)
+        for driver_id, stats in driver_stats.items():
             if y < 120:
                 p.showPage()
                 y = height - 40
+                p.setFont("Helvetica-Bold", 10)
+                for i, header in enumerate(headers):
+                    p.drawString(x_positions[i], y, header)
+                y -= 20
+                p.setFont("Helvetica", 9)
+
             name = driver_name_map.get(driver_id, "Unknown")
+            count_100 = stats["birr_100"]
+            count_200 = stats["birr_200"]
+            count_300 = stats["birr_300"]
+            total = stats["count"]
+            total_price = stats["total_price"]
             avg_per_day = total / avg_days
-            p.drawString(50, y, str(name))
-            p.drawString(250, y, str(total))
-            p.drawString(400, y, f"{avg_per_day:.2f}")
+
+            p.drawString(x_positions[0], y, str(name))
+            p.drawRightString(x_positions[1] + 30, y, str(count_100))
+            p.drawRightString(x_positions[2] + 30, y, str(count_200))
+            p.drawRightString(x_positions[3] + 30, y, str(count_300))
+            p.drawRightString(x_positions[4] + 40, y, str(total))
+            p.drawRightString(x_positions[5] + 60, y, f"{total_price} Br")
+            p.drawRightString(x_positions[6] + 40, y, f"{avg_per_day:.2f}")
             y -= 15
 
         y -= 30
 
-        # Daily Breakdown Table
+        # Daily Breakdown Table (unchanged)
         p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, "📅 Daily Breakdown per Driver")
         y -= 25
@@ -733,6 +860,139 @@ def export_driver_report_pdf():
         return "Error generating PDF", 500
 
 
+@app.route("/statistics/export_user_pdf")
+def export_user_pdf():
+    try:
+        deliveries = list(deliveries_col.find({}))
+
+        sender_counts = defaultdict(lambda: {"sent": 0, "location": "Unknown"})
+        receiver_counts = defaultdict(lambda: {"received": 0, "location": "Unknown"})
+
+        for d in deliveries:
+            sender = d.get("sender_phone")
+            receiver = d.get("receiver_phone")
+            if sender:
+                sender_counts[sender]["sent"] += 1
+                sender_counts[sender]["location"] = d.get("pickup", "Unknown")
+            if receiver:
+                receiver_counts[receiver]["received"] += 1
+                receiver_counts[receiver]["location"] = d.get("dropoff", "Unknown")
+
+        all_customers = {}
+        for phone, data in sender_counts.items():
+            all_customers[phone] = {
+                "phone": phone,
+                "location": data["location"],
+                "sent": data["sent"],
+                "received": 0,
+                "total": data["sent"]
+            }
+        for phone, data in receiver_counts.items():
+            if phone in all_customers:
+                all_customers[phone]["received"] = data["received"]
+                all_customers[phone]["total"] += data["received"]
+            else:
+                all_customers[phone] = {
+                    "phone": phone,
+                    "location": data["location"],
+                    "sent": 0,
+                    "received": data["received"],
+                    "total": data["received"]
+                }
+
+        sorted_customers = sorted(all_customers.values(), key=lambda x: x["total"], reverse=True)
+
+        # PDF Generation
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 40
+
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "👥 Most Active Users Report")
+        y -= 30
+
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(40, y, "Phone")
+        p.drawString(150, y, "Location")
+        p.drawString(300, y, "Sent")
+        p.drawString(360, y, "Received")
+        p.drawString(440, y, "Total")
+        y -= 15
+        p.line(40, y, width - 40, y)
+        y -= 20
+
+        p.setFont("Helvetica", 10)
+        for user in sorted_customers:
+            if y < 60:
+                p.showPage()
+                y = height - 40
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(40, y, "Phone")
+                p.drawString(150, y, "Location")
+                p.drawString(300, y, "Sent")
+                p.drawString(360, y, "Received")
+                p.drawString(440, y, "Total")
+                y -= 15
+                p.line(40, y, width - 40, y)
+                y -= 20
+                p.setFont("Helvetica", 10)
+
+            p.drawString(40, y, user["phone"])
+            p.drawString(150, y, user["location"])
+            p.drawString(300, y, str(user["sent"]))
+            p.drawString(360, y, str(user["received"]))
+            p.drawString(440, y, str(user["total"]))
+            y -= 18
+
+        p.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="most_active_users.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print("❌ Error generating user PDF:", e)
+        return "Error generating PDF", 500
+
+
+from flask import render_template
+from datetime import datetime, timedelta
+
+@app.route("/admin/stats")
+def admin_stats():
+    now = datetime.now()
+    start_of_day = datetime(now.year, now.month, now.day)
+    start_of_week = now - timedelta(days=now.weekday())  # Monday
+    start_of_week = datetime(start_of_week.year, start_of_week.month, start_of_week.day)
+
+    total_starts = db.bot_events.count_documents({"event": "bot_start"})
+    total_fallbacks = db.bot_events.count_documents({"event": "fallback"})
+
+    daily_starts = db.bot_events.count_documents({
+        "event": "bot_start",
+        "timestamp": {"$gte": start_of_day}
+    })
+
+    weekly_deliveries = list(db.deliveries.find({
+        "timestamp": {"$gte": start_of_week.strftime("%Y-%m-%d")}
+    }))
+
+    total_made = 0
+    for d in weekly_deliveries:
+        if d.get("is_free_delivery"):
+            continue
+        price_text = d.get("price", "")
+        try:
+            price = int(str(price_text).strip().split()[0])
+            total_made += price
+        except:
+            continue
+
+    return render_template("admin.html", 
+        total_starts=total_starts,
+        total_fallbacks=total_fallbacks,
+        daily_starts=daily_starts,
+        total_made=total_made
+    )
 
 @app.route('/map')
 def map_view():

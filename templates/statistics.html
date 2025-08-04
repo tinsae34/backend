@@ -49,110 +49,158 @@
 
 <body>
     <h1>📊 Tolo Delivery Statistics Dashboard</h1>
-    <form method="get" style="margin-bottom: 20px;">
-        <label for="days">Filter by days:</label>
-        <select name="days" id="days" onchange="this.form.submit()">
-            {% for d in [7, 14, 30, 60] %}
-            <option value="{{ d }}" {% if selected_days==d %}selected{% endif %}>Last {{ d }} days</option>
-            {% endfor %}
-        </select>
-    </form>
-    <p>Showing data from the last <strong>{{ selected_days }}</strong> days.</p>
+  
+    
     <form method="get" action="/statistics/export_pdf" style="margin-bottom: 20px;">
-        <input type="hidden" name="days" value="{{ selected_days }}">
-        <button type="submit">📄 Download Registration Analytics PDF</button>
+        <input type="hidden" name="days_daily" value="{{ days_daily }}">
+        <button type="submit"
+            style="padding: 10px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            📄 Export Registration Analytics Report
+        </button>
     </form>
-
 
     <div class="tabs">
-        <div class="tab active" data-tab="daily">📆 Daily</div>
-        <div class="tab" data-tab="status">🚚 Status</div>
-        <div class="tab" data-tab="type">🛠 Type</div>
-        <div class="tab" data-tab="drivers">🧑‍✈️ Drivers</div>
-        <div class="tab" data-tab="users">👤 Users</div>
+        <div class="tab {% if active_tab == 'daily' %}active{% endif %}" data-tab="daily">📆 Daily</div>
+        <div class="tab {% if active_tab == 'status' %}active{% endif %}" data-tab="status">🚚 Status</div>
+        <div class="tab {% if active_tab == 'type' %}active{% endif %}" data-tab="type">🛠 Type</div>
+        <div class="tab {% if active_tab == 'drivers' %}active{% endif %}" data-tab="drivers">🧑‍✈️ Drivers</div>
+        <div class="tab {% if active_tab == 'users' %}active{% endif %}" data-tab="users">👤 Users</div>
     </div>
 
-    <div id="daily" class="tab-content active chart-container">
+    <!-- 📆 Daily Deliveries -->
+    <div id="daily" class="tab-content {% if active_tab == 'daily' %}active{% endif %} chart-container">
         <h2>📆 Daily Deliveries</h2>
-    
-        <label for="daysSelect" style="margin-right:8px;">Filter days:</label>
-        <select id="daysSelect" style="margin-right:15px; padding:4px;">
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30" selected>Last 30 days</option>
-        </select>
-    
+
+        <form method="get" style="margin-bottom: 15px;">
+            <input type="hidden" name="tab" value="daily">
+            <label for="days_daily">Filter by days:</label>
+            <select name="days_daily" id="days_daily" onchange="this.form.submit()">
+                {% for d in [7, 14, 30, 60] %}
+                <option value="{{ d }}" {% if days_daily==d %}selected{% endif %}>Last {{ d }} days</option>
+                {% endfor %}
+            </select>
+        </form>
+
         <button id="exportDailyPdf"
             style="margin-bottom: 15px; padding: 8px 12px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">
             Export Daily Registrations PDF
         </button>
-    
+
         <canvas id="dailyChart"></canvas>
     </div>
-    
-    <script>
-        document.getElementById('exportDailyPdf').addEventListener('click', () => {
-            const days = document.getElementById('daysSelect').value;
-            window.open(`/statistics/export_daily_pdf?days=${days}`, '_blank');
-        });
-    </script>
 
-    
-    <script>
-        document.getElementById('exportDailyPdf').addEventListener('click', () => {
-            // Adjust URL if you want to pass filters like days
-            window.open('/statistics/export_daily_pdf', '_blank');
-        });
-    </script>
-
-
-    <div id="status" class="tab-content chart-container">
+    <!-- 🚚 Delivery Status -->
+    <div id="status" class="tab-content {% if active_tab == 'status' %}active{% endif %} chart-container">
         <h2>🚚 Delivery Status</h2>
         <canvas id="statusChart"></canvas>
     </div>
 
-    <div id="type" class="tab-content chart-container">
+    <!-- 🛠 Service Type -->
+    <div id="type" class="tab-content {% if active_tab == 'type' %}active{% endif %} chart-container">
         <h2>🛠 Service Type</h2>
         <canvas id="typeChart"></canvas>
     </div>
 
-    <div id="drivers" class="tab-content chart-container">
+    <!-- 🧑‍✈️ Deliveries per Driver -->
+    <div id="drivers" class="tab-content {% if active_tab == 'drivers' %}active{% endif %} chart-container">
         <h2>🧑‍✈️ Deliveries per Driver</h2>
-        
-        <label for="driverDaysSelect" style="margin-right:8px;">Filter days:</label>
-        <select id="driverDaysSelect" style="margin-right:15px; padding:4px;">
-            <option value="7">Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30" selected>Last 30 days</option>
-        </select>
-        
+
+        <form method="get" style="margin-bottom: 15px;">
+            <input type="hidden" name="tab" value="drivers">
+            <label for="days_drivers">Filter by days:</label>
+            <select name="days_drivers" id="days_drivers" onchange="this.form.submit()">
+                {% for d in [7, 14, 30, 60] %}
+                <option value="{{ d }}" {% if days_drivers==d %}selected{% endif %}>Last {{ d }} days</option>
+                {% endfor %}
+            </select>
+        </form>
+
         <button id="exportDriverPdf"
             style="margin-bottom: 15px; padding: 8px 12px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">
             Export Successful Deliveries PDF
         </button>
-        <canvas id="driverChart"></canvas>
-        <canvas id="driverChart"></canvas>
 
+        <canvas id="driverChart"></canvas>
     </div>
 
-    <div id="users" class="tab-content chart-container">
-        <h2>👤 Unique Users</h2>
-        <p>Total users registered: <strong>{{ total_users }}</strong></p>
+    <!-- 👤 Users -->
+    <div id="users" class="tab-content {% if active_tab == 'users' %}active{% endif %} chart-container">
+        <h2>👤 User Statistics</h2>
+
+        <h3>🏆 Top Senders</h3>
+        <ul>
+            {% for user in top_senders %}
+            <li>{{ user.phone }} — Sent: {{ user.sent }} | Location: {{ user.location }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3>📥 Top Receivers</h3>
+        <ul>
+            {% for user in top_receivers %}
+            <li>{{ user.phone }} — Received: {{ user.received }} | Location: {{ user.location }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3>📄 All Customers</h3>
+        <button id="exportUserPdf"
+            style="margin-bottom: 15px; padding: 8px 12px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">
+            Export Most Active Users PDF
+        </button>
+
+        <table border="1" cellpadding="6" cellspacing="0"
+            style="margin-top:10px; width:100%; border-collapse: collapse;">
+            <thead style="background-color:#222;">
+                <tr>
+                    <th>Phone</th>
+                    <th>Location</th>
+                    <th>Sent</th>
+                    <th>Received</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in all_customers %}
+                <tr>
+                    <td>{{ user.phone }}</td>
+                    <td>{{ user.location }}</td>
+                    <td>{{ user.sent }}</td>
+                    <td>{{ user.received }}</td>
+                    <td>{{ user.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
+    <!-- Scripts -->
     <script>
-        // Tab switching logic
+        const daysDaily = {{ days_daily | tojson }};
+        const daysDrivers = {{ days_drivers | tojson }};
+
+        // Tab switching with preserved tab state
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab).classList.add('active');
+                const tabName = tab.dataset.tab;
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tabName);
+                window.location.href = url.toString();
             });
         });
 
-        // Daily Chart
+        // Export PDFs
+        document.getElementById('exportDailyPdf').addEventListener('click', () => {
+            window.open(`/statistics/export_daily_pdf?days=${daysDaily}`, '_blank');
+        });
+
+        document.getElementById('exportDriverPdf').addEventListener('click', () => {
+            window.open(`/statistics/export_driver_pdf?days=${daysDrivers}`, '_blank');
+        });
+
+        document.getElementById('exportUserPdf').addEventListener('click', () => {
+            window.open('/statistics/export_user_pdf', '_blank');
+        });
+
+        // Charts
         new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: {
@@ -165,7 +213,6 @@
             }
         });
 
-        // Status Chart
         new Chart(document.getElementById('statusChart'), {
             type: 'pie',
             data: {
@@ -178,20 +225,18 @@
             }
         });
 
-        // Type Chart
         new Chart(document.getElementById('typeChart'), {
             type: 'doughnut',
             data: {
                 labels: {{ type_counts.keys() | list | tojson }},
             datasets: [{
-                    label: 'Type',
-                    data: {{ type_counts.values() | list | tojson }},
-                    backgroundColor: ['#ab47bc', '#29b6f6', '#ffca28']
+                label: 'Type',
+                data: {{ type_counts.values() | list | tojson }},
+            backgroundColor: ['#ab47bc', '#29b6f6', '#ffca28']
                 }]
             }
         });
 
-        // Driver Chart
         new Chart(document.getElementById('driverChart'), {
             type: 'bar',
             data: {
@@ -203,11 +248,6 @@
                 }]
             }
         });
-        document.getElementById('exportDriverPdf').addEventListener('click', () => {
-                const days = document.getElementById('driverDaysSelect').value;
-                window.open(`/statistics/export_driver_pdf?days=${days}`, '_blank');
-            });
-
     </script>
 </body>
 

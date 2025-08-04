@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tolo Admin Dashboard</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #0af;
+        }
+
+        .stat-box {
+            background: #222;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+        }
+
+        .stat-box h2 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛠️ Admin Stats</h1>
+
+    <div class="stat-box">
+        <h2>📈 Total Bot Starts</h2>
+        <p>{{ total_starts }}</p>
+    </div>
+
+    <div class="stat-box">
+        <h2>📅 Daily Usage (Today)</h2>
+        <p>{{ daily_starts }}</p>
+    </div>
+
+    <div class="stat-box">
+        <h2>💰 Total Made This Week</h2>
+        <p>{{ total_made }} birr</p>
+    </div>
+
+    <div class="stat-box">
+        <h2>⚠️ Total Fallbacks</h2>
+        <p>{{ total_fallbacks }}</p>
+    </div>
+</body>
+
+</html>
