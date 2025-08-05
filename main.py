@@ -794,6 +794,7 @@ def export_driver_report_pdf():
                 continue
             if d.get("status", "").lower() != "successful":
                 continue
+            
 
             driver_id = d.get("assigned_driver_id")
             price = int(d.get("price", 0))
